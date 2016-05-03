@@ -1,0 +1,23 @@
+Message:
+    {{ commit_message }}
+
+Repository: {{ repository }}
+Branch: {{ branch }}
+Author: {{ author }}
+Pusher: {{ pusher }}
+Date: {{ commit_date }}
+URL: {{ commit_url }}
+JIRA: {{ jira_url }}
+
+Files:
+{% for item in commit_added %}
+  # Filename
+{% endfor %}
+{% for item in commit_removed %}
+  # Filename
+{% endfor %}
+{% for item in commit_modified %}
+  # Filename
+{% endfor %}
+
+# Diffs
