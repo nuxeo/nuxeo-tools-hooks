@@ -2,7 +2,7 @@ from nxtools.hooks.entities.github.PushEvent import PushEvent
 from nxtools.hooks.webhook.github_hook import AbstractGithubHandler
 
 
-class GithubNotifyMailHandler(AbstractGithubHandler):
+class GithubPushNotifyMailHandler(AbstractGithubHandler):
 
     MSG_BAD_REF = "Unknown branch reference '%s'"
     MSG_IGNORE_BRANCH = "Ignore branch '%s'"
@@ -10,7 +10,7 @@ class GithubNotifyMailHandler(AbstractGithubHandler):
     JENKINS_PUSHER_NAME = "nuxeojenkins"
 
     def __init__(self, hook):
-        super(GithubNotifyMailHandler, self).__init__(hook)
+        super(GithubPushNotifyMailHandler, self).__init__(hook)
 
         self._ignore_branch_checks = [
             self.explicit_ignore,
@@ -19,6 +19,8 @@ class GithubNotifyMailHandler(AbstractGithubHandler):
 
         self._ignored_branches = [] #TODO: load from configuration file
         self._ignored_branch_suffixes = [] #TODO: load from configuration file
+        self._sender = "noreply@nuxeo.com" #TODO: load from configuration file
+        self._recipients = ["ecm-checkins@lists.nuxeo.com"] #TODO: load from configuration file
 
     @property
     def ignored_branches(self):
@@ -32,7 +34,7 @@ class GithubNotifyMailHandler(AbstractGithubHandler):
         event = PushEvent(None, None, payload_body, True)
 
         if self.is_bad_ref(event):
-            return 400, GithubNotifyMailHandler.MSG_BAD_REF % event.ref
+            return 400, GithubPushNotifyMailHandler.MSG_BAD_REF % event.ref
 
         should_exit, add_warn, exit_message = self.check_branch_ignored(event)
 
@@ -42,7 +44,7 @@ class GithubNotifyMailHandler(AbstractGithubHandler):
         return 200, "OK"
 
     def is_jenkins(self, event):
-        return event.pusher.name.value == GithubNotifyMailHandler.JENKINS_PUSHER_NAME
+        return event.pusher.name.value == GithubPushNotifyMailHandler.JENKINS_PUSHER_NAME
 
     def is_bad_ref(self, event):
         return not event.ref.startswith("refs/heads/")
@@ -64,7 +66,7 @@ class GithubNotifyMailHandler(AbstractGithubHandler):
 
         if branch in self.ignored_branches:
             if self.is_jenkins(event):
-                return True, False, GithubNotifyMailHandler.MSG_IGNORE_BRANCH % branch
+                return True, False, GithubPushNotifyMailHandler.MSG_IGNORE_BRANCH % branch
             return False, True, ""
         return False, False, None
 
@@ -74,7 +76,7 @@ class GithubNotifyMailHandler(AbstractGithubHandler):
         for suffix in self.ignore_branch_suffixes:
             if branch.endswith(suffix):
                 if self.is_jenkins(event):
-                    return True, False, GithubNotifyMailHandler.MSG_IGNORE_BRANCH % branch
+                    return True, False, GithubPushNotifyMailHandler.MSG_IGNORE_BRANCH % branch
             return False, True, ""
         return False, False, None
 

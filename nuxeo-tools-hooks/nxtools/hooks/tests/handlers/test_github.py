@@ -3,7 +3,7 @@ import unittest
 import json
 
 from mock.mock import patch, Mock
-from nxtools.hooks.webhook.github_handlers.notify_mail import GithubNotifyMailHandler
+from nxtools.hooks.webhook.github_handlers.push_notify_mail import GithubPushNotifyMailHandler
 from nxtools.hooks.webhook.github_handlers.review import GithubReviewHandler
 from nxtools.hooks.webhook.github_hook import GithubHook, UnknownEventException, InvalidPayloadException
 
@@ -62,20 +62,20 @@ class GithubHandlerTest(unittest.TestCase):
             body = json.loads(raw_body)
             bad_ref_body = body.copy()
             bad_ref_body["ref"] = "refs/wrong/anything"
-            self.assertTupleEqual((400, GithubNotifyMailHandler.MSG_BAD_REF % bad_ref_body["ref"]),
-                                  GithubNotifyMailHandler(self.handler).handle(bad_ref_body))
+            self.assertTupleEqual((400, GithubPushNotifyMailHandler.MSG_BAD_REF % bad_ref_body["ref"]),
+                                  GithubPushNotifyMailHandler(self.handler).handle(bad_ref_body))
 
             jenkins_author_body = body.copy()
-            jenkins_author_body["pusher"]["name"] = GithubNotifyMailHandler.JENKINS_PUSHER_NAME
+            jenkins_author_body["pusher"]["name"] = GithubPushNotifyMailHandler.JENKINS_PUSHER_NAME
 
-            explicit_ignore_handler = GithubNotifyMailHandler(self.handler)
+            explicit_ignore_handler = GithubPushNotifyMailHandler(self.handler)
             explicit_ignore_handler._ignored_branches = ['feature-NXBT-1074-hooks-refactoring']
-            self.assertTupleEqual((200, GithubNotifyMailHandler.MSG_IGNORE_BRANCH % body["ref"][11:]),
+            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_IGNORE_BRANCH % body["ref"][11:]),
                                   explicit_ignore_handler.handle(jenkins_author_body))
 
-            explicit_ignore_handler = GithubNotifyMailHandler(self.handler)
+            explicit_ignore_handler = GithubPushNotifyMailHandler(self.handler)
             explicit_ignore_handler._ignored_branch_suffixes = ['hooks-refactoring']
-            self.assertTupleEqual((200, GithubNotifyMailHandler.MSG_IGNORE_BRANCH % body["ref"][11:]),
+            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_IGNORE_BRANCH % body["ref"][11:]),
                                   explicit_ignore_handler.handle(jenkins_author_body))
 
     def testIssueComment(self):
