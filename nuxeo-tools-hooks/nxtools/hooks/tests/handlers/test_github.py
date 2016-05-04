@@ -67,8 +67,14 @@ class GithubHandlerTest(unittest.TestCase):
 
             jenkins_author_body = body.copy()
             jenkins_author_body["pusher"]["name"] = GithubNotifyMailHandler.JENKINS_PUSHER_NAME
+
             explicit_ignore_handler = GithubNotifyMailHandler(self.handler)
             explicit_ignore_handler._ignored_branches = ['feature-NXBT-1074-hooks-refactoring']
+            self.assertTupleEqual((200, GithubNotifyMailHandler.MSG_IGNORE_BRANCH % body["ref"][11:]),
+                                  explicit_ignore_handler.handle(jenkins_author_body))
+
+            explicit_ignore_handler = GithubNotifyMailHandler(self.handler)
+            explicit_ignore_handler._ignored_branch_suffixes = ['hooks-refactoring']
             self.assertTupleEqual((200, GithubNotifyMailHandler.MSG_IGNORE_BRANCH % body["ref"][11:]),
                                   explicit_ignore_handler.handle(jenkins_author_body))
 

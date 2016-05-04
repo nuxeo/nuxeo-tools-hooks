@@ -13,14 +13,20 @@ class GithubNotifyMailHandler(AbstractGithubHandler):
         super(GithubNotifyMailHandler, self).__init__(hook)
 
         self._ignore_branch_checks = [
-            self.explicit_ignore
+            self.explicit_ignore,
+            self.suffix_ignore
         ] #TODO: load from configuration file
 
         self._ignored_branches = [] #TODO: load from configuration file
+        self._ignored_branch_suffixes = [] #TODO: load from configuration file
 
     @property
     def ignored_branches(self):
         return self._ignored_branches
+
+    @property
+    def ignore_branch_suffixes(self):
+        return self._ignored_branch_suffixes
 
     def handle(self, payload_body):
         event = PushEvent(None, None, payload_body, True)
@@ -61,4 +67,15 @@ class GithubNotifyMailHandler(AbstractGithubHandler):
                 return True, False, GithubNotifyMailHandler.MSG_IGNORE_BRANCH % branch
             return False, True, ""
         return False, False, None
+
+    def suffix_ignore(self, event):
+        branch = self.get_branch_short_name(event)
+
+        for suffix in self.ignore_branch_suffixes:
+            if branch.endswith(suffix):
+                if self.is_jenkins(event):
+                    return True, False, GithubNotifyMailHandler.MSG_IGNORE_BRANCH % branch
+            return False, True, ""
+        return False, False, None
+
 
