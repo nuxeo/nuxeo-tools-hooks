@@ -5,13 +5,60 @@ from nxtools.hooks.webhook.github_hook import AbstractGithubHandler
 class GithubNotifyMailHandler(AbstractGithubHandler):
 
     MSG_BAD_REF = "Unknown branch reference '%s'"
+    MSG_IGNORE_BRANCH = "Ignore branch '%s'"
+
+    JENKINS_PUSHER_NAME = "nuxeojenkins"
+
+    def __init__(self, hook):
+        super(GithubNotifyMailHandler, self).__init__(hook)
+
+        self._ignore_branch_checks = [
+            self.explicit_ignore
+        ] #TODO: load from configuration file
+
+        self._ignored_branches = [] #TODO: load from configuration file
+
+    @property
+    def ignored_branches(self):
+        return self._ignored_branches
 
     def handle(self, payload_body):
         event = PushEvent(None, None, payload_body, True)
 
-        is_jenkins = event.pusher.name == "nuxeojenkins"
-        is_bad_ref = not event.ref.startswith("refs/heads/")
-
-        if is_bad_ref:
+        if self.is_bad_ref(event):
             return 400, GithubNotifyMailHandler.MSG_BAD_REF % event.ref
+
+        should_exit, add_warn, exit_message = self.check_branch_ignored(event)
+
+        if should_exit:
+            return 200, exit_message
+
+        return 200, "OK"
+
+    def is_jenkins(self, event):
+        return event.pusher.name.value == GithubNotifyMailHandler.JENKINS_PUSHER_NAME
+
+    def is_bad_ref(self, event):
+        return not event.ref.startswith("refs/heads/")
+
+    def get_branch_short_name(self, event):
+        return event.ref[11:]
+
+    def check_branch_ignored(self, event):
+        warn = False
+        for check in self._ignore_branch_checks:
+            should_exit, add_warn, exit_message = check(event)
+            warn = warn or add_warn
+            if should_exit:
+                return should_exit, warn, exit_message
+        return False, warn, None
+
+    def explicit_ignore(self, event):
+        branch = self.get_branch_short_name(event)
+
+        if branch in self.ignored_branches:
+            if self.is_jenkins(event):
+                return True, False, GithubNotifyMailHandler.MSG_IGNORE_BRANCH % branch
+            return False, True, ""
+        return False, False, None
 

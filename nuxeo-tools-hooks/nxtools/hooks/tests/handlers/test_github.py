@@ -36,7 +36,6 @@ class GithubHandlerTest(unittest.TestCase):
         def __exit__(self, exc_type, exc_val, exc_tb):
             self.payload_file.close()
             self.headers_file.close()
-            return True
 
     def setUp(self):
         self.mocks = GithubHandlerTest.TestMocks()
@@ -57,15 +56,21 @@ class GithubHandlerTest(unittest.TestCase):
             self.handler.handle({GithubHook.payloadHeader: "issue_comment"}, "{}")
 
     def testSendEmail(self):
-        GithubHook.add_handler("push", GithubNotifyMailHandler(self.handler))
-
         with GithubHandlerTest.payload_file('github_push') as payload:
-            body, headers = payload
+            raw_body, headers = payload
 
-            bad_ref_body = body
+            body = json.loads(raw_body)
+            bad_ref_body = body.copy()
             bad_ref_body["ref"] = "refs/wrong/anything"
             self.assertTupleEqual((400, GithubNotifyMailHandler.MSG_BAD_REF % bad_ref_body["ref"]),
-                                  self.handler.handle(headers, bad_ref_body))
+                                  GithubNotifyMailHandler(self.handler).handle(bad_ref_body))
+
+            jenkins_author_body = body.copy()
+            jenkins_author_body["pusher"]["name"] = GithubNotifyMailHandler.JENKINS_PUSHER_NAME
+            explicit_ignore_handler = GithubNotifyMailHandler(self.handler)
+            explicit_ignore_handler._ignored_branches = ['feature-NXBT-1074-hooks-refactoring']
+            self.assertTupleEqual((200, GithubNotifyMailHandler.MSG_IGNORE_BRANCH % body["ref"][11:]),
+                                  explicit_ignore_handler.handle(jenkins_author_body))
 
     def testIssueComment(self):
         GithubHook.add_handler("issue_comment", GithubReviewHandler(self.handler))
