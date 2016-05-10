@@ -5,21 +5,15 @@ class GithubReviewHandler(AbstractGithubHandler):
 
     markReviewedComments = [":+1:"]
 
-    @property
-    def organization(self):
-        """
-        :rtype github.Organization.Organization
-        """
-        return self.hook.organization
-
     def handle(self, payload_body):
         try:
             comment_body = payload_body["comment"]["body"].strip()
             repository_name = payload_body["repository"]["name"]
             issue_id = payload_body["issue"]["number"]
+            organization = payload_body["organization"]["login"]
 
             if comment_body in GithubReviewHandler.markReviewedComments:
-                repository = self.organization.get_repo(repository_name)
+                repository = self.hook.get_organization(organization).get_repo(repository_name)
                 pr = repository.get_pull(issue_id)
                 last_commit = pr.get_commits().reversed[0]
 

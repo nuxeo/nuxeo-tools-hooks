@@ -1,0 +1,259 @@
+Message:
+    NXBT-1074: better comments
+
+Repository: nuxeo-tools-hooks
+Branch: feature-NXBT-1074-hooks-refactoring
+Author: Pierre-Gildas MILLON <pgmillon@nuxeo.com>
+Date: 2016-05-03T16:55:28 UTC
+URL: https://github.com/nuxeo/nuxeo-tools-hooks/commit/3c24d8eafae62cb82c576d0f5ccbbe37bdeb9dd5
+JIRA: https://jira.nuxeo.com/browse/NXBT-1074
+
+Files:
+A .gitignore
+A README.rst
+A nuxeo-tools-hooks/nxtools/__init__.py
+A nuxeo-tools-hooks/nxtools/hooks/__init__.py
+A nuxeo-tools-hooks/nxtools/hooks/app.py
+A nuxeo-tools-hooks/nxtools/hooks/router.py
+A nuxeo-tools-hooks/nxtools/hooks/tests/__init__.py
+A nuxeo-tools-hooks/nxtools/hooks/tests/handlers/__init__.py
+A nuxeo-tools-hooks/nxtools/hooks/tests/handlers/test_github.py
+A nuxeo-tools-hooks/nxtools/hooks/tests/resources/github_hooks/github_issue_comment.headers.json
+A nuxeo-tools-hooks/nxtools/hooks/tests/resources/github_hooks/github_issue_comment.json
+A nuxeo-tools-hooks/nxtools/hooks/webhook/__init__.py
+A nuxeo-tools-hooks/nxtools/hooks/webhook/github_handlers/__init__.py
+A nuxeo-tools-hooks/nxtools/hooks/webhook/github_handlers/review.py
+A nuxeo-tools-hooks/nxtools/hooks/webhook/github_hook.py
+A setup.cfg
+A setup.py
+D nuxeo-tools-hooks/nxtools/hooks/tests/resources/github_hooks/github_status.headers.json
+D nuxeo-tools-hooks/nxtools/hooks/tests/resources/github_hooks/github_status.json
+M nuxeo-tools-hooks/nxtools/hooks/tests/resources/github_hooks/github_pullrequest_open.headers.json
+M nuxeo-tools-hooks/nxtools/hooks/tests/resources/github_hooks/github_pullrequest_open.json
+
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..428a6e8
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,90 @@
++### Python template
++# Byte-compiled / optimized / DLL files
++__pycache__/
++*.py[cod]
++*$py.class
++
++# C extensions
++*.so
++
++# Distribution / packaging
++.Python
++env/
++build/
++develop-eggs/
++dist/
++downloads/
++eggs/
++.eggs/
++lib/
++lib64/
++parts/
++sdist/
++var/
++*.egg-info/
++.installed.cfg
++*.egg
++
++# PyInstaller
++#  Usually these files are written by a python script from a template
++#  before PyInstaller builds the exe, so as to inject date/other infos into it.
++*.manifest
++*.spec
++
++# Installer logs
++pip-log.txt
++pip-delete-this-directory.txt
++
++# Unit test / coverage reports
++htmlcov/
++.tox/
++.coverage
++.coverage.*
++.cache
++nosetests.xml
++coverage.xml
++*,cover
++.hypothesis/
++
++# Translations
++*.mo
++*.pot
++
++# Django stuff:
++*.log
++local_settings.py
++
++# Flask instance folder
++instance/
++
++# Scrapy stuff:
++.scrapy
++
++# Sphinx documentation
++docs/_build/
++
++# PyBuilder
++target/
++
++# IPython Notebook
++.ipynb_checkpoints
++
++# pyenv
++.python-version
++
++# celery beat schedule file
++celerybeat-schedule
++
++# dotenv
++.env
++
++# virtualenv
++venv/
++ENV/
++
++# Spyder project settings
++.spyderproject
++
++# Rope project settings
++.ropeproject
++
+diff --git a/README.rst b/README.rst
+new file mode 100644
+index 0000000..45e26dd
+--- /dev/null
++++ b/README.rst
+@@ -0,0 +1,25 @@
++================================
++Nuxeo Tools Notification Manager
++================================
++
++Description
++===========
++
++**Nuxeo Tools Notification Manager** is a simple notification aggregator
++
++Features
++========
++
++- Complete & accessible JSON-based API
++
++Authors
++=======
++
++Nuxeo Tools Notification Manager is written and maintained by `Nuxeo <contact@nuxeo.com>`_.
++
++`See here for the full list of contributors <https://github.com/pgmillon/openvpn-manager/graphs/contributors>`_.
++
++About Nuxeo
++===========
++
++Nuxeo dramatically improves how content-based applications are built, managed and deployed, making customers more agile, innovative and successful. Nuxeo provides a next generation, enterprise ready platform for building traditional and cutting-edge content oriented applications. Combining a powerful application development environment with SaaS-based tools and a modular architecture, the Nuxeo Platform and Products provide clear business value to some of the most recognizable brands including Verizon, Electronic Arts, Netflix, Sharp, FICO, the U.S. Navy, and Boeing. Nuxeo is headquartered in New York and Paris. More information is available at www.nuxeo.com.
+\ No newline at end of file
+diff --git a/nuxeo-tools-hooks/nxtools/__init__.py b/nuxeo-tools-hooks/nxtools/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/nuxeo-tools-hooks/nxtools/hooks/__init__.py b/nuxeo-tools-hooks/nxtools/hooks/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/nuxeo-tools-hooks/nxtools/hooks/webhook/__init__.py b/nuxeo-tools-hooks/nxtools/hooks/webhook/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/nuxeo-tools-hooks/nxtools/hooks/webhook/github_handlers/__init__.py b/nuxeo-tools-hooks/nxtools/hooks/webhook/github_handlers/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/nuxeo-tools-hooks/nxtools/hooks/webhook/github_handlers/review.py b/nuxeo-tools-hooks/nxtools/hooks/webhook/github_handlers/review.py
+new file mode 100644
+index 0000000..ff731eb
+--- /dev/null
++++ b/nuxeo-tools-hooks/nxtools/hooks/webhook/github_handlers/review.py
+@@ -0,0 +1,33 @@
++from nxtools.hooks.webhook.github_hook import InvalidPayloadException, AbstractGithubHandler
++
++
++class GithubReviewHandler(AbstractGithubHandler):
++
++    markReviewedComments = [":+1:"]
++
++    @property
++    def organization(self):
++        """
++        :rtype github.Organization.Organization
++        """
++        return self.hook.organization
++
++    def handle(self, payload_body):
++        try:
++            comment_body = payload_body["comment"]["body"].strip()
++            repository_name = payload_body["repository"]["name"]
++            issue_id = payload_body["issue"]["number"]
++
++            if comment_body in GithubReviewHandler.markReviewedComments:
++                repository = self.organization.get_repo(repository_name)
++                pr = repository.get_pull(issue_id)
++                last_commit = pr.get_commits().reversed[0]
++
++                for status in last_commit.get_statuses():
++                    if status.raw_data["context"] == "review/nuxeo" and status.state == "success":
++                        return
++
++                print("reviewed")
++
++        except KeyError, e:
++            raise InvalidPayloadException(e)
+\ No newline at end of file
+diff --git a/setup.cfg b/setup.cfg
+new file mode 100644
+index 0000000..d8b775b
+--- /dev/null
++++ b/setup.cfg
+@@ -0,0 +1,2 @@
++[nosetests]
++where=nuxeo-tools-hooks
+diff --git a/setup.py b/setup.py
+new file mode 100644
+index 0000000..00bb3ad
+--- /dev/null
++++ b/setup.py
+@@ -0,0 +1,31 @@
++import codecs
++from setuptools import setup, find_packages
++
++setup(
++    name='nuxeo-tools-notify-center',
++    version='1.0.0.dev1',
++    license='ASLREADME.rst',
++    author='Nuxeo',
++    author_email='contact@nuxeo.com',
++    description='A simple notification aggregator',
++    long_description=codecs.open('README.rst', encoding='utf-8').read(),
++    url='https://github.com/nuxeo-sandbox/nuxeo-tools-notify-center',
++    classifiers=[
++        'Development Status :: 3 - Alpha',
++        'Intended Audience :: Developers',
++        'Topic :: System :: Networking',
++        'License :: OSI Approved :: Apache Software License',
++        'Programming Language :: Python :: 2.7'
++    ],
++    keywords='leboncoin',
++    install_requires=[
++        'flask',
++        'flask_jsontools',
++        'flask_restless',
++        'tornado',
++        'beautifulsoup4',
++        'mock',
++        'PyGithub',
++        'requests'
++    ]
++)
+\ No newline at end of file

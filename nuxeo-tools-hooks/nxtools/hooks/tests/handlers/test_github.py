@@ -1,25 +1,13 @@
 
-import unittest
 import json
 
-from mock.mock import patch, Mock
+from mock.mock import patch, Mock, PropertyMock
+from nxtools.hooks.tests.case import HooksTestCase
 from nxtools.hooks.webhook.github_handlers.push_notify_mail import GithubPushNotifyMailHandler
-from nxtools.hooks.webhook.github_handlers.review import GithubReviewHandler
 from nxtools.hooks.webhook.github_hook import GithubHook, UnknownEventException, InvalidPayloadException
 
 
-class GithubHandlerTest(unittest.TestCase):
-
-    class TestMocks(object):
-
-        def __init__(self):
-            self._items = {}
-
-        def __getattribute__(self, item):
-            items = object.__getattribute__(self, '_items')
-            if item not in items:
-                items[item] = Mock()
-            return items[item]
+class GithubHandlerTest(HooksTestCase):
 
     class payload_file(object):
 
@@ -40,54 +28,39 @@ class GithubHandlerTest(unittest.TestCase):
     def setUp(self):
         self.mocks = GithubHandlerTest.TestMocks()
 
-        self.handler = GithubHook()
+        self.hook = GithubHook()
+        self.maxDiff = None
 
-        patcher_organization = patch('nxtools.hooks.webhook.github_hook.GithubHook.organization',
-                                     self.mocks.organization)
+        patcher_organization = patch('github.MainClass.Github.get_organization', return_value=self.mocks.organization)
 
         patcher_organization.start()
+
+        # Mocks required for nxtools.hooks.entities.github_entities.RepositoryWrapper#get_commit_diff
+        self.mocks.repository_url = PropertyMock(return_value="http://null.void/")
+        type(self.mocks.organization.get_repo.return_value).url = self.mocks.repository_url
+        self.mocks.requester.requestJson.return_value = "Query mocked"
+        self.mocks.organization.get_repo.return_value._requester = self.mocks.requester
+
         self.addCleanup(patcher_organization.stop)
 
     def test_event(self):
+        self.hook.add_handler("push", GithubPushNotifyMailHandler(self.hook, Mock()))
         with self.assertRaises(UnknownEventException):
-            self.handler.handle({GithubHook.payloadHeader: "Unknown"}, "{}")
+            self.hook.handle({GithubHook.payloadHeader: "Unknown"}, "{}")
 
         with self.assertRaises(InvalidPayloadException):
-            self.handler.handle({GithubHook.payloadHeader: "issue_comment"}, "{}")
+            self.hook.handle({GithubHook.payloadHeader: "push"}, "{}")
 
-    def testSendEmail(self):
-        with GithubHandlerTest.payload_file('github_push') as payload:
-            raw_body, headers = payload
-
-            body = json.loads(raw_body)
-            bad_ref_body = body.copy()
-            bad_ref_body["ref"] = "refs/wrong/anything"
-            self.assertTupleEqual((400, GithubPushNotifyMailHandler.MSG_BAD_REF % bad_ref_body["ref"]),
-                                  GithubPushNotifyMailHandler(self.handler).handle(bad_ref_body))
-
-            jenkins_author_body = body.copy()
-            jenkins_author_body["pusher"]["name"] = GithubPushNotifyMailHandler.JENKINS_PUSHER_NAME
-
-            explicit_ignore_handler = GithubPushNotifyMailHandler(self.handler)
-            explicit_ignore_handler._ignored_branches = ['feature-NXBT-1074-hooks-refactoring']
-            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_IGNORE_BRANCH % body["ref"][11:]),
-                                  explicit_ignore_handler.handle(jenkins_author_body))
-
-            explicit_ignore_handler = GithubPushNotifyMailHandler(self.handler)
-            explicit_ignore_handler._ignored_branch_suffixes = ['hooks-refactoring']
-            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_IGNORE_BRANCH % body["ref"][11:]),
-                                  explicit_ignore_handler.handle(jenkins_author_body))
-
-    def testIssueComment(self):
-        GithubHook.add_handler("issue_comment", GithubReviewHandler(self.handler))
-
-        self.mocks.commit.get_statuses.return_value = [
-            Mock(state="success", raw_data={"context": "review/nuxeo"})
-        ]
-        self.mocks.pull_request.get_commits.return_value = Mock(reversed=[self.mocks.commit])
-        self.mocks.repository.get_pull.return_value = self.mocks.pull_request
-        self.mocks.organization.get_repo.return_value = self.mocks.repository
-
-        with GithubHandlerTest.payload_file('github_issue_comment') as payload:
-            body, headers = payload
-            self.handler.handle(headers, body)
+        # def testIssueComment(self):
+    #     GithubHook.add_handler("issue_comment", GithubReviewHandler(self.handler))
+    #
+    #     self.mocks.commit.get_statuses.return_value = [
+    #         Mock(state="success", raw_data={"context": "review/nuxeo"})
+    #     ]
+    #     self.mocks.pull_request.get_commits.return_value = Mock(reversed=[self.mocks.commit])
+    #     self.mocks.repository.get_pull.return_value = self.mocks.pull_request
+    #     self.mocks.organization.get_repo.return_value = self.mocks.repository
+    #
+    #     with GithubHandlerTest.payload_file('github_issue_comment') as payload:
+    #         body, headers = payload
+    #         self.handler.handle(headers, body)

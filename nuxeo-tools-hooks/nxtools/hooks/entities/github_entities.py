@@ -1,4 +1,3 @@
-
 from github.GithubObject import NotSet, NonCompletableGithubObject
 from github.NamedUser import NamedUser
 from github.Organization import Organization
@@ -49,22 +48,37 @@ class PushEvent(NonCompletableGithubObject):
 
     @property
     def head_commit(self):
+        """
+        :rtype: nxtools.hooks.entities.github_entities.Commit
+        """
         return self._head_commit.value
 
     @property
     def repository(self):
+        """
+        :rtype: github.Repository.Repository
+        """
         return self._repository.value
 
     @property
     def pusher(self):
+        """
+        :rtype: nxtools.hooks.entities.github_entities.User
+        """
         return self._pusher.value
 
     @property
     def organization(self):
+        """
+        :rtype: github.Organization.Organization
+        """
         return self._organization.value
 
     @property
     def sender(self):
+        """
+        :rtype: github.NamedUser.NamedUser
+        """
         return self._sender.value
 
     def _initAttributes(self):
@@ -116,6 +130,50 @@ class PushEvent(NonCompletableGithubObject):
 
 class Commit(NonCompletableGithubObject):
 
+    @property
+    def id(self):
+        return self._id.value
+
+    @property
+    def tree_id(self):
+        return self._tree_id.value
+
+    @property
+    def distinct(self):
+        return self._distinct.value
+
+    @property
+    def message(self):
+        return self._message.value
+
+    @property
+    def timestamp(self):
+        return self._timestamp.value
+
+    @property
+    def url(self):
+        return self._url.value
+
+    @property
+    def author(self):
+        return self._author.value
+
+    @property
+    def committer(self):
+        return self._committer.value
+
+    @property
+    def added(self):
+        return self._added.value
+
+    @property
+    def removed(self):
+        return self._removed.value
+
+    @property
+    def modified(self):
+        return self._modified.value
+
     def _initAttributes(self):
         self._id = NotSet
         self._tree_id = NotSet
@@ -139,7 +197,7 @@ class Commit(NonCompletableGithubObject):
         if "message" in attributes:
             self._message = self._makeStringAttribute(attributes["message"])
         if "timestamp" in attributes:
-            self._timestamp = self._makeTimestampAttribute(attributes["timestamp"])
+            self._timestamp = self._makeDatetimeAttribute(attributes["timestamp"])
         if "url" in attributes:
             self._url = self._makeStringAttribute(attributes["url"])
         if "author" in attributes:
@@ -158,11 +216,11 @@ class User(NonCompletableGithubObject):
 
     @property
     def name(self):
-        return self._name
+        return self._name.value
 
     @property
     def email(self):
-        return self._email
+        return self._email.value
 
     def _initAttributes(self):
         self._name = NotSet
@@ -178,8 +236,8 @@ class User(NonCompletableGithubObject):
 class Author(User):
 
     @property
-    def username(self):
-        return self._username
+    def c(self):
+        return self._username.value
 
     def _initAttributes(self):
         User._initAttributes(self)
@@ -189,3 +247,43 @@ class Author(User):
         User._useAttributes(self, attributes)
         if "username" in attributes:
             self._username = self._makeStringAttribute(attributes["username"])
+
+
+class RepositoryWrapper(Repository):
+
+    GITHUB_DIFF_ACCEPT_HEADER = {"Accept": "application/vnd.github.diff"}
+
+    def __init__(self, repository):
+        self.__dict__["_wrapped"] = repository
+        self._pgm = "test"
+
+    def __getattr__(self, name):
+        return getattr(self._wrapped, name)
+
+    def __setattr__(self, name, value):
+        setattr(self._wrapped, name, value)
+
+    def get_commit_diff(self, sha):
+        assert isinstance(sha, (str, unicode)), sha
+
+        return self._requester.requestJson("GET", self._wrapped.url + "/commit/" + sha, None,
+                                           RepositoryWrapper.GITHUB_DIFF_ACCEPT_HEADER, None)
+
+
+class OrganizationWrapper(Organization):
+
+    def __init__(self, organization):
+        self.__dict__["_wrapped"] = organization
+
+    def __getattr__(self, name):
+        return getattr(self._wrapped, name)
+
+    def __setattr__(self, name, value):
+        setattr(self._wrapped, name, value)
+
+    def get_repo(self, name):
+        """
+        :rtype: nxtools.hooks.entities.github_entities.RepositoryWrapper
+        """
+        assert isinstance(name, (str, unicode)), name
+        return RepositoryWrapper(self._wrapped.get_repo(name))

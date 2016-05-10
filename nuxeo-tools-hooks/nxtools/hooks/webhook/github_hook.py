@@ -4,7 +4,8 @@ import json
 
 from abc import ABCMeta, abstractmethod
 from github.MainClass import Github
-from github.GithubException import BadCredentialsException, UnknownObjectException, GithubException
+from github.GithubException import UnknownObjectException
+from nxtools.hooks.entities.github_entities import OrganizationWrapper
 
 
 class UnknownEventException(Exception):
@@ -33,6 +34,9 @@ class AbstractGithubHandler(object):
 
     @property
     def hook(self):
+        """
+        :rtype: nxtools.hooks.webhook.github_hook.GithubHook
+        """
         return self._hook
 
     def __init__(self, hook):
@@ -51,10 +55,7 @@ class GithubHook(object):
 
     def __init__(self):
 
-        self._nuxeo_orga = None
-
-        # TODO: Use config file
-        self.organization_name = "nuxeo-sandbox"
+        self._organizations = {}
 
         # TODO: https://github.com/organizations/nuxeo-sandbox/settings/applications
         self.github = Github("")
@@ -63,7 +64,7 @@ class GithubHook(object):
     def add_handler(event, handler):
         """
         @type event : str
-        @type handler : AbstractGithubHandler
+        @type handler : nxtools.hooks.webhook.github_hook.AbstractGithubHandler
         """
         if event not in GithubHook._handlers:
             GithubHook._handlers[event] = [handler]
@@ -73,20 +74,21 @@ class GithubHook(object):
     @staticmethod
     def get_handlers(event):
         """
-        :rtype: list[AbstractGithubHandler]
+        :rtype: list[nxtools.hooks.webhook.github_hook.AbstractGithubHandler]
         @type event : str
         """
         return GithubHook._handlers[event] if event in GithubHook._handlers else []
 
-    @property
-    def organization(self):
-        if self._nuxeo_orga is None:
+    def get_organization(self, name):
+        """
+        :rtype: nxtools.hooks.entities.github_entities.OrganizationWrapper
+        """
+        if name not in self._organizations:
             try:
-                self._nuxeo_orga = self.github.get_organization(self.organization_name)
+                self._organizations[name] = OrganizationWrapper(self.github.get_organization(name))
             except UnknownObjectException:
-                raise NoSuchOrganizationException(self.organization_name)
-
-        return self._nuxeo_orga
+                raise NoSuchOrganizationException(name)
+        return self._organizations[name]
 
     def handle(self, headers, body):
         """

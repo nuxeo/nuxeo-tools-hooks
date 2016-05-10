@@ -1,5 +1,5 @@
 import codecs
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name='nuxeo-tools-notify-center',
@@ -17,15 +17,11 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 2.7'
     ],
-    keywords='leboncoin',
+    keywords='nuxeo',
     install_requires=[
-        'flask',
-        'flask_jsontools',
-        'flask_restless',
-        'tornado',
-        'beautifulsoup4',
         'mock',
         'PyGithub',
-        'requests'
+        'Jinja2',
+        'Unidecode'
     ]
 )
