@@ -207,6 +207,19 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
                 "NXBT-1074: better comments hehe",
                 event.ref[11:]))
 
+    def test_private_repository(self):
+        with GithubHandlerTest.payload_file('github_push') as payload:
+            raw_body, headers = payload
+            body = json.loads(raw_body)
+
+            self.assertTrue(body["repository"])
+            body["repository"]["private"] = True
+
+            event = PushEvent(None, None, body, True)
+            email = self.handler.get_commit_email(event, event.commits[0], False)
+            self.assertEqual(email.to, "interne-checkins@lists.nuxeo.com")
+
+
     def test_diff_retriever(self):
         with GithubHandlerTest.payload_file('github_push') as payload:
             raw_body, headers = payload
@@ -304,5 +317,6 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
                 email = self.handler.get_commit_email(event, event.commits[0], False)
 
                 self.assertMultiLineEqual(email_file.read(), email.body)
+                self.assertEqual(email.to, "ecm-checkins@lists.nuxeo.com")
                 self.mocks.requester.requestJson.assert_called_with("GET", event.commits[0].url, None,
                                                                     RepositoryWrapper.GITHUB_DIFF_ACCEPT_HEADER, None)

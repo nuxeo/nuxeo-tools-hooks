@@ -22,6 +22,8 @@ class Email:
 
     @property
     def to(self):
+        if isinstance(self._to, list):
+            return ", ".join(self._to)
         return self._to
 
     @property

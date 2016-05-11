@@ -74,6 +74,13 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
         return recipients
 
     @property
+    def recipients_priv(self):
+        recipients = self.get_config("recipients_priv", "interne-checkins@lists.nuxeo.com")
+        if recipients:
+            return re.sub(r"\s+", "", recipients, flags=re.UNICODE).split(",")
+        return recipients
+
+    @property
     def jenkins_name(self):
         return self.get_config("jenkins_name", "Jenkins Nuxeo")
 
@@ -142,7 +149,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
         """
         :type event: nxtools.hooks.entities.github_entities.PushEvent
         :type commit: nxtools.hooks.entities.github_entities.Commit
-        :rtype: nxtools.hooks.entities.github_entities.Email
+        :rtype: nxtools.hooks.entities.mail.Email
         """
         template = self._jinja.get_template(self.email_template)
         committer_name = commit.committer.name
@@ -173,6 +180,10 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
         if with_warn:
             subject = "[WARN] " + subject
 
+        recipients = self.recipients
+        if event.repository.private:
+            recipients = self.recipients_priv
+
         return Email(body=template.render(
             commit_message=commit.message,
             repository=event.repository.name,
@@ -187,7 +198,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
             with_warn=with_warn,
             jira_tickets=jira_tickets,
             diff=diff
-        ), subject=unidecode(subject), sender=unidecode(fake_address), reply_to=unidecode(real_address), to=None)
+        ), subject=unidecode(subject), sender=unidecode(fake_address), reply_to=unidecode(real_address), to=recipients)
 
     def check_branch_ignored(self, event):
         """
