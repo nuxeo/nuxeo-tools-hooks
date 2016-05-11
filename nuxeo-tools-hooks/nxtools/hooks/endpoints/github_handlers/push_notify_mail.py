@@ -6,7 +6,7 @@ from jinja2.environment import Environment
 from jinja2.loaders import PackageLoader
 from nxtools.hooks.entities.mail import Email
 from nxtools.hooks.entities.github_entities import PushEvent
-from nxtools.hooks.webhook.github_hook import AbstractGithubHandler, InvalidPayloadException
+from nxtools.hooks.endpoints.github_hook import AbstractGithubHandler, InvalidPayloadException
 from unidecode import unidecode
 
 
@@ -21,7 +21,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
 
     def __init__(self, hook, email_service):
         """
-        :type hook : nxtools.hooks.webhook.github_hook.GithubHook
+        :type hook : nxtools.hooks.endpoints.github_hook.GithubHookEndpoint
         :type email_service : nxtools.hooks.services.mail.EmailService
         """
         super(GithubPushNotifyMailHandler, self).__init__(hook)
@@ -215,7 +215,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
 
 def branch_ignore(handler, event):
     """
-    :type handler: nxtools.hooks.webhook.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
+    :type handler: nxtools.hooks.endpoints.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
     :type event: nxtools.hooks.entities.github_entities.PushEvent
     """
     branch = handler.get_branch_short_name(event)
@@ -229,7 +229,7 @@ def branch_ignore(handler, event):
 
 def suffix_ignore(handler, event):
     """
-    :type handler: nxtools.hooks.webhook.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
+    :type handler: nxtools.hooks.endpoints.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
     :type event: nxtools.hooks.entities.github_entities.PushEvent
     """
     branch = handler.get_branch_short_name(event)
@@ -244,7 +244,7 @@ def suffix_ignore(handler, event):
 
 def repository_ignore(handler, event):
     """
-    :type handler: nxtools.hooks.webhook.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
+    :type handler: nxtools.hooks.endpoints.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
     :type event: nxtools.hooks.entities.github_entities.PushEvent
     """
     addWarn = False

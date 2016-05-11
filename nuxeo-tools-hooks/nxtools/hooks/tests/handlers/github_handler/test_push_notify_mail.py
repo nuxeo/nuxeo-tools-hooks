@@ -5,7 +5,7 @@ from mock.mock import Mock
 from nxtools.hooks.entities.github_entities import PushEvent
 from nxtools.hooks.entities.github_entities import RepositoryWrapper
 from nxtools.hooks.tests.handlers.test_github import GithubHandlerTest
-from nxtools.hooks.webhook.github_handlers.push_notify_mail import GithubPushNotifyMailHandler
+from nxtools.hooks.endpoints.github_handlers.push_notify_mail import GithubPushNotifyMailHandler
 
 
 class GithubNotifyMailHandlerTest(GithubHandlerTest):
@@ -32,7 +32,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
     @property
     def handler(self):
         """
-        :rtype: nxtools.hooks.webhook.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
+        :rtype: nxtools.hooks.endpoints.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
         """
         return self._handler
 
@@ -59,7 +59,8 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
             body = self.get_json_body_from_payload(payload)
             self.handler.hook.config._config.set(self.handler.config_section, "ignored_branches", "stable")
             self.handler.hook.config._config.set(self.handler.config_section, "ignore_checks",
-                                                 "nxtools.hooks.webhook.github_handlers.push_notify_mail.branch_ignore")
+                                                 "nxtools.hooks.endpoints.github_handlers.push_notify_mail."
+                                                 "branch_ignore")
 
             self.assertTrue(body["ref"])
             body["ref"] = "refs/heads/stable"
@@ -84,7 +85,8 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
             body = self.get_json_body_from_payload(payload)
             self.handler.hook.config._config.set(self.handler.config_section, "ignored_branch_suffixes", "-SNAPSHOT")
             self.handler.hook.config._config.set(self.handler.config_section, "ignore_checks",
-                                                 "nxtools.hooks.webhook.github_handlers.push_notify_mail.suffix_ignore")
+                                                 "nxtools.hooks.endpoints.github_handlers.push_notify_mail."
+                                                 "suffix_ignore")
 
             self.assertTrue(body["ref"])
             body["ref"] = "refs/heads/5.7-SNAPSHOT"
@@ -261,7 +263,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
             self.handler.hook.config._config.set(self.handler.config_section, "ignored_repositories",
                                                  "qapriv.nuxeo.org-conf")
             self.handler.hook.config._config.set(self.handler.config_section, "ignore_checks",
-                                                 "nxtools.hooks.webhook.github_handlers.push_notify_mail."
+                                                 "nxtools.hooks.endpoints.github_handlers.push_notify_mail."
                                                  "repository_ignore")
 
             event = PushEvent(None, None, body, True)

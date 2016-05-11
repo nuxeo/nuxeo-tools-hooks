@@ -1,4 +1,4 @@
-from nxtools.hooks.webhook.github_hook import InvalidPayloadException, AbstractGithubHandler
+from nxtools.hooks.endpoints.github_hook import InvalidPayloadException, AbstractGithubHandler
 
 
 class GithubReviewHandler(AbstractGithubHandler):

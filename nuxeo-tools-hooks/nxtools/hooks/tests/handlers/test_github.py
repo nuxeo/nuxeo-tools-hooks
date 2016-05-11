@@ -4,8 +4,8 @@ import json
 from mock.mock import patch, Mock, PropertyMock
 from nxtools.hooks.services.config import Config
 from nxtools.hooks.tests.case import HooksTestCase
-from nxtools.hooks.webhook.github_handlers.push_notify_mail import GithubPushNotifyMailHandler
-from nxtools.hooks.webhook.github_hook import GithubHook, UnknownEventException, InvalidPayloadException
+from nxtools.hooks.endpoints.github_handlers.push_notify_mail import GithubPushNotifyMailHandler
+from nxtools.hooks.endpoints.github_hook import GithubHookEndpoint, UnknownEventException, InvalidPayloadException
 
 
 class GithubHandlerTest(HooksTestCase):
@@ -29,7 +29,7 @@ class GithubHandlerTest(HooksTestCase):
     def setUp(self):
         self.mocks = GithubHandlerTest.TestMocks()
 
-        self.hook = GithubHook(Config("nxtools/hooks/tests/resources/github_hooks/config.ini"))
+        self.hook = GithubHookEndpoint(Config("nxtools/hooks/tests/resources/github_hooks/config.ini"))
         self.maxDiff = None
 
         patcher_organization = patch('github.MainClass.Github.get_organization', return_value=self.mocks.organization)
@@ -47,10 +47,10 @@ class GithubHandlerTest(HooksTestCase):
     def test_event(self):
         self.hook.add_handler("push", GithubPushNotifyMailHandler(self.hook, Mock()))
         with self.assertRaises(UnknownEventException):
-            self.hook.handle({GithubHook.payloadHeader: "Unknown"}, "{}")
+            self.hook.handle({GithubHookEndpoint.payloadHeader: "Unknown"}, "{}")
 
         with self.assertRaises(InvalidPayloadException):
-            self.hook.handle({GithubHook.payloadHeader: "push"}, "{}")
+            self.hook.handle({GithubHookEndpoint.payloadHeader: "push"}, "{}")
 
         # def testIssueComment(self):
     #     GithubHook.add_handler("issue_comment", GithubReviewHandler(self.handler))

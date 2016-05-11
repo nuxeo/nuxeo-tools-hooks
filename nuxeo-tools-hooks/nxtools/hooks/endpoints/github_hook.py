@@ -39,7 +39,7 @@ class AbstractGithubHandler(object):
     @property
     def hook(self):
         """
-        :rtype: nxtools.hooks.webhook.github_hook.GithubHook
+        :rtype: nxtools.hooks.endpoints.github_hook.GithubHookEndpoint
         """
         return self.__hook
 
@@ -51,7 +51,7 @@ class AbstractGithubHandler(object):
         return self.hook.config.get(self.config_section, key, default, env_key)
 
 
-class GithubHook(object):
+class GithubHookEndpoint(object):
 
     eventSource = "Github"
     payloadHeader = "X-GitHub-Event"
@@ -79,20 +79,20 @@ class GithubHook(object):
     def add_handler(event, handler):
         """
         @type event : str
-        @type handler : nxtools.hooks.webhook.github_hook.AbstractGithubHandler
+        @type handler : nxtools.hooks.endpoints.github_hook.AbstractGithubHandler
         """
-        if event not in GithubHook._handlers:
-            GithubHook._handlers[event] = [handler]
+        if event not in GithubHookEndpoint._handlers:
+            GithubHookEndpoint._handlers[event] = [handler]
         else:
-            GithubHook._handlers[event].append(handler)
+            GithubHookEndpoint._handlers[event].append(handler)
 
     @staticmethod
     def get_handlers(event):
         """
-        :rtype: list[nxtools.hooks.webhook.github_hook.AbstractGithubHandler]
+        :rtype: list[nxtools.hooks.endpoints.github_hook.AbstractGithubHandler]
         @type event : str
         """
-        return GithubHook._handlers[event] if event in GithubHook._handlers else []
+        return GithubHookEndpoint._handlers[event] if event in GithubHookEndpoint._handlers else []
 
     def get_organization(self, name):
         """
@@ -111,9 +111,9 @@ class GithubHook(object):
         @type body : str
         """
 
-        if GithubHook.payloadHeader in headers:
-            payload_event = headers[GithubHook.payloadHeader]
-            handlers = GithubHook.get_handlers(payload_event)
+        if GithubHookEndpoint.payloadHeader in headers:
+            payload_event = headers[GithubHookEndpoint.payloadHeader]
+            handlers = GithubHookEndpoint.get_handlers(payload_event)
 
             if handlers:
                 json_body = json.loads(body)
