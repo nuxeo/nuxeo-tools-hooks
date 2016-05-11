@@ -1,3 +1,4 @@
+from importlib import import_module
 
 import re
 
@@ -27,55 +28,74 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
 
         self._email_service = email_service
 
-        self._ignore_branch_checks = [
-            self.branch_ignore,
-            self.suffix_ignore,
-            self.repository_ignore
-        ] #TODO: load from configuration file
-
         self._jinja = Environment(loader=PackageLoader(GithubPushNotifyMailHandler.__module__, 'resources'))
-        self._ignored_branches = [] #TODO: load from configuration file
-        self._ignored_branch_suffixes = [] #TODO: load from configuration file
-        self._ignored_repositories = [] #TODO: load from configuration file
-        self._sender = "noreply@nuxeo.com" #TODO: load from configuration file
-        self._recipients = ["ecm-checkins@lists.nuxeo.com"] #TODO: load from configuration file
-        self._jenkins_email = "jenkins@nuxeo.com" #TODO: load from configuration file
-        self._jenkins_name = "Jenkins Nuxeo" #TODO: load from configuration file
-        self._jenkins_username = "nuxeojenkins" #TODO: load from configuration file
-        self._jinja_template = "notify_mail.txt" #TODO: load from configuration file
-        self._jira_regex = re.compile(r"\b([A-Z]+-\d+)\b", re.I) #TODO: load from configuration file
+
+    @property
+    def ignore_checks(self):
+        checks = self.get_config("ignore_checks", [])
+        if checks:
+            checks = re.sub(r"\s+", "", checks, flags=re.UNICODE).split(",")
+        else:
+            return [branch_ignore, suffix_ignore, repository_ignore]
+
+        for i, check in enumerate(checks):
+            module_str, function_str = check.rsplit('.', 1)
+            module = import_module(module_str)
+            checks[i] = getattr(module, function_str)
+
+        return checks
 
     @property
     def ignored_branches(self):
-        return self._ignored_branches
+        branches = self.get_config("ignored_branches", [])
+        if branches:
+            return re.sub(r"\s+", "", branches, flags=re.UNICODE).split(",")
+        return branches
 
     @property
     def ignore_branch_suffixes(self):
-        return self._ignored_branch_suffixes
+        suffixes = self.get_config("ignored_branch_suffixes", [])
+        if suffixes:
+            return re.sub(r"\s+", "", suffixes, flags=re.UNICODE).split(",")
+        return suffixes
 
     @property
     def ignore_repositories(self):
-        return self._ignored_repositories
+        repositories = self.get_config("ignored_repositories", [])
+        if repositories:
+            return re.sub(r"\s+", "", repositories, flags=re.UNICODE).split(",")
+        return repositories
+
+    @property
+    def recipients(self):
+        recipients = self.get_config("recipients", "ecm-checkins@lists.nuxeo.com")
+        if recipients:
+            return re.sub(r"\s+", "", recipients, flags=re.UNICODE).split(",")
+        return recipients
 
     @property
     def jenkins_name(self):
-        return self._jenkins_name
+        return self.get_config("jenkins_name", "Jenkins Nuxeo")
 
     @property
     def jenkins_username(self):
-        return self._jenkins_username
+        return self.get_config("jenkins_username", "nuxeojenkins")
 
     @property
     def jenkins_email(self):
-        return self._jenkins_email
+        return self.get_config("jenkins_email", "jenkins@nuxeo.com")
 
     @property
     def sender(self):
-        return self._sender
+        return self.get_config("sender", "noreply@nuxeo.com")
 
     @property
     def jira_regex(self):
-        return self._jira_regex
+        return re.compile(self.get_config("jira_regex", r"\b([A-Z]+-\d+)\b"), re.I)
+
+    @property
+    def email_template(self):
+        return self.get_config("jinja_template", "notify_mail.txt")
 
     def handle(self, payload_body):
         event = PushEvent(None, None, payload_body, True)
@@ -124,12 +144,12 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
         :type commit: nxtools.hooks.entities.github_entities.Commit
         :rtype: nxtools.hooks.entities.github_entities.Email
         """
-        template = self._jinja.get_template('notify_mail.txt')
+        template = self._jinja.get_template(self.email_template)
         committer_name = commit.committer.name
         pusher = None
         jira_tickets = []
 
-        if self.is_jenkins(event) and commit.committer.email != self._jenkins_email:
+        if self.is_jenkins(event) and commit.committer.email != self.jenkins_email:
             committer_name += " via Jenkins"
 
         real_address = "%s <%s>" % (committer_name, commit.committer.email)
@@ -174,58 +194,64 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
         :type event: nxtools.hooks.entities.github_entities.PushEvent
         """
         warn = False
-        for check in self._ignore_branch_checks:
-            should_exit, add_warn, exit_message = check(event)
+        for check in self.ignore_checks:
+            should_exit, add_warn, exit_message = check(self, event)
             warn = warn or add_warn
             if should_exit:
                 return should_exit, warn, exit_message
         return False, warn, None
 
-    def branch_ignore(self, event):
-        """
-        :type event: nxtools.hooks.entities.github_entities.PushEvent
-        """
-        branch = self.get_branch_short_name(event)
 
-        if branch in self.ignored_branches:
-            if self.is_jenkins(event):
+def branch_ignore(handler, event):
+    """
+    :type handler: nxtools.hooks.webhook.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
+    :type event: nxtools.hooks.entities.github_entities.PushEvent
+    """
+    branch = handler.get_branch_short_name(event)
+
+    if branch in handler.ignored_branches:
+        if handler.is_jenkins(event):
+            return True, False, GithubPushNotifyMailHandler.MSG_IGNORE_BRANCH % branch
+        return False, True, ""
+    return False, False, None
+
+
+def suffix_ignore(handler, event):
+    """
+    :type handler: nxtools.hooks.webhook.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
+    :type event: nxtools.hooks.entities.github_entities.PushEvent
+    """
+    branch = handler.get_branch_short_name(event)
+
+    for suffix in handler.ignore_branch_suffixes:
+        if branch.endswith(suffix):
+            if handler.is_jenkins(event):
                 return True, False, GithubPushNotifyMailHandler.MSG_IGNORE_BRANCH % branch
-            return False, True, ""
-        return False, False, None
+        return False, True, ""
+    return False, False, None
 
-    def suffix_ignore(self, event):
-        """
-        :type event: nxtools.hooks.entities.github_entities.PushEvent
-        """
-        branch = self.get_branch_short_name(event)
 
-        for suffix in self.ignore_branch_suffixes:
-            if branch.endswith(suffix):
-                if self.is_jenkins(event):
-                    return True, False, GithubPushNotifyMailHandler.MSG_IGNORE_BRANCH % branch
-            return False, True, ""
-        return False, False, None
-
-    def repository_ignore(self, event):
-        """
-        :type event: nxtools.hooks.entities.github_entities.PushEvent
-        """
-        addWarn = False
-        if event.repository.name in self.ignore_repositories:
-            has_system = False
-            has_non_system = False
-            ignored_urls = []
-            for commit in event.commits:
-                if re.match(".*updated by SYSTEM.*", commit.message):
-                    has_system = True
-                    ignored_urls.append(commit.url)
-                else:
-                    has_non_system = True
-            if has_system and not has_non_system:
-                if self.is_jenkins(event):
-                    return True, False, GithubPushNotifyMailHandler.MSG_IGNORE_COMMITS % (", ".join(ignored_urls))
-                else:
-                    addWarn = True
-        return False, addWarn, None
+def repository_ignore(handler, event):
+    """
+    :type handler: nxtools.hooks.webhook.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
+    :type event: nxtools.hooks.entities.github_entities.PushEvent
+    """
+    addWarn = False
+    if event.repository.name in handler.ignore_repositories:
+        has_system = False
+        has_non_system = False
+        ignored_urls = []
+        for commit in event.commits:
+            if re.match(".*updated by SYSTEM.*", commit.message):
+                has_system = True
+                ignored_urls.append(commit.url)
+            else:
+                has_non_system = True
+        if has_system and not has_non_system:
+            if handler.is_jenkins(event):
+                return True, False, GithubPushNotifyMailHandler.MSG_IGNORE_COMMITS % (", ".join(ignored_urls))
+            else:
+                addWarn = True
+    return False, addWarn, None
 
 

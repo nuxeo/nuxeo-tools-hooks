@@ -57,7 +57,9 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
     def test_ignored_stable_branch_payload(self):
         with GithubHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
-            self.handler._ignored_branches = ['stable']
+            self.handler.hook.config._config.set(self.handler.config_section, "ignored_branches", "stable")
+            self.handler.hook.config._config.set(self.handler.config_section, "ignore_checks",
+                                                 "nxtools.hooks.webhook.github_handlers.push_notify_mail.branch_ignore")
 
             self.assertTrue(body["ref"])
             body["ref"] = "refs/heads/stable"
@@ -80,7 +82,9 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
     def test_ignored_snapshot_branch_payload(self):
         with GithubHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
-            self.handler._ignored_branch_suffixes = ['-SNAPSHOT']
+            self.handler.hook.config._config.set(self.handler.config_section, "ignored_branch_suffixes", "-SNAPSHOT")
+            self.handler.hook.config._config.set(self.handler.config_section, "ignore_checks",
+                                                 "nxtools.hooks.webhook.github_handlers.push_notify_mail.suffix_ignore")
 
             self.assertTrue(body["ref"])
             body["ref"] = "refs/heads/5.7-SNAPSHOT"
@@ -100,12 +104,10 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
                 event.commits[0].message,
                 branch))
 
-            # TODO: Check emails are sent
-
     def test_jenkins_ignored_payload(self):
         with GithubHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
-            self.handler._ignored_branches = ['stable']
+            self.handler.hook.config._config.set(self.handler.config_section, "ignored_branches", "stable")
 
             self.assertTrue(body["ref"])
             self.assertTrue(body["pusher"])
@@ -243,7 +245,11 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
         with GithubHandlerTest.payload_file('github_push') as payload:
             raw_body, headers = payload
             body = json.loads(raw_body)
-            self.handler._ignored_repositories = ["qapriv.nuxeo.org-conf"]
+            self.handler.hook.config._config.set(self.handler.config_section, "ignored_repositories",
+                                                 "qapriv.nuxeo.org-conf")
+            self.handler.hook.config._config.set(self.handler.config_section, "ignore_checks",
+                                                 "nxtools.hooks.webhook.github_handlers.push_notify_mail."
+                                                 "repository_ignore")
 
             event = PushEvent(None, None, body, True)
 

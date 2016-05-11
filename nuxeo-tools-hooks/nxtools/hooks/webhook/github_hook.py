@@ -28,6 +28,10 @@ class NoSuchOrganizationException(Exception):
 class AbstractGithubHandler(object):
     __metaclass__ = ABCMeta
 
+    def __init__(self, hook):
+        self.__hook = hook
+        self.__config_section = type(self).__name__
+
     @abstractmethod
     def handle(self, payload_body):
         pass
@@ -37,11 +41,14 @@ class AbstractGithubHandler(object):
         """
         :rtype: nxtools.hooks.webhook.github_hook.GithubHook
         """
-        return self._hook
+        return self.__hook
 
-    def __init__(self, hook):
-        object.__init__(self)
-        self._hook = hook
+    @property
+    def config_section(self):
+        return self.__config_section
+
+    def get_config(self, key, default=None, env_key=None):
+        return self.hook.config.get(self.config_section, key, default, env_key)
 
 
 class GithubHook(object):
@@ -53,12 +60,20 @@ class GithubHook(object):
     _handlers = {}
     """:type : dict[str, list[AbstractGithubHandler]]"""
 
-    def __init__(self):
+    def __init__(self, config):
+        self.__config = config
 
         self._organizations = {}
 
         # TODO: https://github.com/organizations/nuxeo-sandbox/settings/applications
         self.github = Github("")
+
+    @property
+    def config(self):
+        """
+        :rtype: nxtools.hooks.services.config.Config
+        """
+        return self.__config
 
     @staticmethod
     def add_handler(event, handler):

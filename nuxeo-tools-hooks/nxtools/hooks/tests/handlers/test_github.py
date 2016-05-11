@@ -2,6 +2,7 @@
 import json
 
 from mock.mock import patch, Mock, PropertyMock
+from nxtools.hooks.services.config import Config
 from nxtools.hooks.tests.case import HooksTestCase
 from nxtools.hooks.webhook.github_handlers.push_notify_mail import GithubPushNotifyMailHandler
 from nxtools.hooks.webhook.github_hook import GithubHook, UnknownEventException, InvalidPayloadException
@@ -28,7 +29,7 @@ class GithubHandlerTest(HooksTestCase):
     def setUp(self):
         self.mocks = GithubHandlerTest.TestMocks()
 
-        self.hook = GithubHook()
+        self.hook = GithubHook(Config("nxtools/hooks/tests/resources/github_hooks/config.ini"))
         self.maxDiff = None
 
         patcher_organization = patch('github.MainClass.Github.get_organization', return_value=self.mocks.organization)
