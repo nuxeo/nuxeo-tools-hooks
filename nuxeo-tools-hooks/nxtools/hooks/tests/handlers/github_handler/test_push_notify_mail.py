@@ -19,10 +19,6 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
         super(GithubNotifyMailHandlerTest, self).setUp()
         self._handler = GithubPushNotifyMailHandler(self.hook, self.email_service)
 
-    def get_json_body_from_payload(self, payload):
-        raw_body, headers = payload
-        return json.loads(raw_body)
-
     def get_event_from_body(self, body):
         """
         :rtype: nxtools.hooks.entities.github_entities.PushEvent
@@ -188,8 +184,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
 
     def test_payload_with_accents(self):
         with GithubHandlerTest.payload_file('github_push') as payload:
-            raw_body, headers = payload
-            body = json.loads(raw_body)
+            body = self.get_json_body_from_payload(payload)
 
             self.assertTrue(body["commits"][0])
             body["commits"][0]["message"] += u" héhé"
@@ -211,8 +206,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
 
     def test_private_repository(self):
         with GithubHandlerTest.payload_file('github_push') as payload:
-            raw_body, headers = payload
-            body = json.loads(raw_body)
+            body = self.get_json_body_from_payload(payload)
 
             self.assertTrue(body["repository"])
             body["repository"]["private"] = True
@@ -221,11 +215,9 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
             email = self.handler.get_commit_email(event, event.commits[0], False)
             self.assertEqual(email.to, "interne-checkins@lists.nuxeo.com")
 
-
     def test_diff_retriever(self):
         with GithubHandlerTest.payload_file('github_push') as payload:
-            raw_body, headers = payload
-            body = json.loads(raw_body)
+            body = self.get_json_body_from_payload(payload)
 
             event = PushEvent(None, None, body, True)
 
@@ -234,12 +226,12 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
             self.email_service.sendemail.assert_called_once()
 
             email = self.handler.get_commit_email(event, event.commits[0], False)
-            self.assertRegexpMatches(email.body, 'Could not read diff - see %s.diff for raw diff' % event.commits[0].url)
+            self.assertRegexpMatches(email.body, 'Could not read diff - see %s.diff for raw diff' %
+                                     event.commits[0].url)
 
     def test_jira_regexp(self):
         with GithubHandlerTest.payload_file('github_push') as payload:
-            raw_body, headers = payload
-            body = json.loads(raw_body)
+            body = self.get_json_body_from_payload(payload)
 
             self.assertTrue(body["commits"][0])
             body["commits"][0]["message"] = "check regexp for NXP-8238 and nxp-666 and also NXS-1234 as well as " \
@@ -258,8 +250,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
 
     def test_jenkins_payload_with_ignore(self):
         with GithubHandlerTest.payload_file('github_push') as payload:
-            raw_body, headers = payload
-            body = json.loads(raw_body)
+            body = self.get_json_body_from_payload(payload)
             self.handler.hook.config._config.set(self.handler.config_section, "ignored_repositories",
                                                  "qapriv.nuxeo.org-conf")
             self.handler.hook.config._config.set(self.handler.config_section, "ignore_checks",
@@ -300,8 +291,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
 
     def test_standard_payload(self):
         with GithubHandlerTest.payload_file('github_push') as payload:
-            raw_body, headers = payload
-            body = json.loads(raw_body)
+            body = self.get_json_body_from_payload(payload)
 
             self.assertTrue(body["commits"][0])
             event = PushEvent(None, None, body, True)
