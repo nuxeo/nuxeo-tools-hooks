@@ -44,6 +44,10 @@ class GithubHandlerTest(HooksTestCase):
 
         self.addCleanup(patcher_organization.stop)
 
+    def get_json_body_from_payload(self, payload):
+        raw_body, headers = payload
+        return json.loads(raw_body)
+
     def test_event(self):
         self.hook.add_handler("push", GithubPushNotifyMailHandler(self.hook, Mock()))
         with self.assertRaises(UnknownEventException):

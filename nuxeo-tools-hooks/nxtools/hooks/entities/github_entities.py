@@ -1,6 +1,7 @@
 from github.GithubObject import NotSet, NonCompletableGithubObject
 from github.NamedUser import NamedUser
 from github.Organization import Organization
+from github.PullRequest import PullRequest
 from github.Repository import Repository
 
 
@@ -122,6 +123,67 @@ class PushEvent(NonCompletableGithubObject):
             self._repository = self._makeClassAttribute(Repository, attributes["repository"])
         if "pusher" in attributes:
             self._pusher = self._makeClassAttribute(User, attributes["pusher"])
+        if "organization" in attributes:
+            self._organization = self._makeClassAttribute(Organization, attributes["organization"])
+        if "sender" in attributes:
+            self._sender = self._makeClassAttribute(NamedUser, attributes["sender"])
+
+
+class PullRequestEvent(NonCompletableGithubObject):
+
+    @property
+    def action(self):
+        return self._action.value
+
+    @property
+    def number(self):
+        return self._number.value
+
+    @property
+    def pull_request(self):
+        """
+        :rtype: github.PullRequest.PullRequest
+        """
+        return self._pull_request.value
+
+    @property
+    def repository(self):
+        """
+        :rtype: github.Repository.Repository
+        """
+        return self._repository.value
+
+    @property
+    def organization(self):
+        """
+        :rtype: github.Organization.Organization
+        """
+        return self._organization.value
+
+    @property
+    def sender(self):
+        """
+        :rtype: github.NamedUser.NamedUser
+        """
+        return self._sender.value
+
+    def _initAttributes(self):
+        self._action = NotSet
+        self._number = NotSet
+        self._pull_request = NotSet
+        self._repository = NotSet
+        self._organization = NotSet
+        self._sender = NotSet
+        
+    def _useAttributes(self, attributes):
+        if "action" in attributes:
+            self._action = self._makeStringAttribute(attributes["action"])
+        if "number" in attributes:
+            self._number = self._makeIntAttribute(attributes["number"])
+        if "pull_request" in attributes:
+            self._pull_request = self._makeClassAttribute(PullRequest,  attributes["pull_request"])
+        if "repository" in attributes:
+            self._repository = self._makeClassAttribute(Repository, attributes["repository"])
         if "organization" in attributes:
             self._organization = self._makeClassAttribute(Organization, attributes["organization"])
         if "sender" in attributes:

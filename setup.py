@@ -22,6 +22,8 @@ setup(
         'mock',
         'PyGithub',
         'Jinja2',
-        'Unidecode'
+        'Unidecode',
+        'mongoengine',
+        'mongomock'
     ]
 )
