@@ -19,6 +19,7 @@ setup(
     ],
     keywords='nuxeo',
     install_requires=[
+        'flask',
         'mock',
         'PyGithub',
         'Jinja2',
