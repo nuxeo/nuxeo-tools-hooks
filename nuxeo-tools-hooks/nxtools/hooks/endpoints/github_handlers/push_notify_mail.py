@@ -4,9 +4,10 @@ import re
 
 from jinja2.environment import Environment
 from jinja2.loaders import PackageLoader
+from nxtools.hooks.endpoints.github_handlers import AbstractGithubHandler
 from nxtools.hooks.entities.mail import Email
 from nxtools.hooks.entities.github_entities import PushEvent
-from nxtools.hooks.endpoints.github_hook import AbstractGithubHandler, InvalidPayloadException
+from nxtools.hooks.endpoints.github_hook import InvalidPayloadException
 from unidecode import unidecode
 
 

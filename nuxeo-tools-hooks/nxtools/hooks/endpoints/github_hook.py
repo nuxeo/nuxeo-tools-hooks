@@ -2,7 +2,6 @@
 
 import json
 
-from abc import ABCMeta, abstractmethod
 from github.MainClass import Github
 from github.GithubException import UnknownObjectException
 from nxtools.hooks.entities.github_entities import OrganizationWrapper
@@ -23,32 +22,6 @@ class InvalidPayloadException(Exception):
 class NoSuchOrganizationException(Exception):
     def __init__(self, organization):
         super(NoSuchOrganizationException, self).__init__("Unknown organization '%s'" % organization)
-
-
-class AbstractGithubHandler(object):
-    __metaclass__ = ABCMeta
-
-    def __init__(self, hook):
-        self.__hook = hook
-        self.__config_section = type(self).__name__
-
-    @abstractmethod
-    def handle(self, payload_body):
-        pass
-
-    @property
-    def hook(self):
-        """
-        :rtype: nxtools.hooks.endpoints.github_hook.GithubHookEndpoint
-        """
-        return self.__hook
-
-    @property
-    def config_section(self):
-        return self.__config_section
-
-    def get_config(self, key, default=None, env_key=None):
-        return self.hook.config.get(self.config_section, key, default, env_key)
 
 
 class GithubHookEndpoint(object):

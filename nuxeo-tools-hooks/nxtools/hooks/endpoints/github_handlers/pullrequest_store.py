@@ -1,4 +1,4 @@
-from nxtools.hooks.endpoints.github_hook import AbstractGithubHandler
+from nxtools.hooks.endpoints.github_handlers import AbstractGithubHandler
 from nxtools.hooks.entities.github_entities import PullRequestEvent
 from nxtools.hooks.entities.nuxeo_qa import StoredPullRequest
 
