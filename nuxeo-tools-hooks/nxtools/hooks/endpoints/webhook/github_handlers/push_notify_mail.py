@@ -1,13 +1,12 @@
 from importlib import import_module
 
 import re
-
 from jinja2.environment import Environment
 from jinja2.loaders import PackageLoader
-from nxtools.hooks.endpoints.github_handlers import AbstractGithubHandler
-from nxtools.hooks.entities.mail import Email
+from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
+from nxtools.hooks.endpoints.webhook.github_hook import InvalidPayloadException
 from nxtools.hooks.entities.github_entities import PushEvent
-from nxtools.hooks.endpoints.github_hook import InvalidPayloadException
+from nxtools.hooks.entities.mail import Email
 from unidecode import unidecode
 
 
@@ -216,7 +215,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
 
 def branch_ignore(handler, event):
     """
-    :type handler: nxtools.hooks.endpoints.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
+    :type handler: nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
     :type event: nxtools.hooks.entities.github_entities.PushEvent
     """
     branch = handler.get_branch_short_name(event)
@@ -230,7 +229,7 @@ def branch_ignore(handler, event):
 
 def suffix_ignore(handler, event):
     """
-    :type handler: nxtools.hooks.endpoints.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
+    :type handler: nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
     :type event: nxtools.hooks.entities.github_entities.PushEvent
     """
     branch = handler.get_branch_short_name(event)
@@ -245,7 +244,7 @@ def suffix_ignore(handler, event):
 
 def repository_ignore(handler, event):
     """
-    :type handler: nxtools.hooks.endpoints.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
+    :type handler: nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
     :type event: nxtools.hooks.entities.github_entities.PushEvent
     """
     addWarn = False

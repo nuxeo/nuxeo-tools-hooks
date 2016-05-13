@@ -4,7 +4,10 @@ import json
 
 from github.MainClass import Github
 from github.GithubException import UnknownObjectException
+from nxtools import services
+from nxtools.hooks.endpoints.webhook import AbstractWebHook
 from nxtools.hooks.entities.github_entities import OrganizationWrapper
+from nxtools.hooks.services.config import Config
 
 
 class UnknownEventException(Exception):
@@ -24,7 +27,7 @@ class NoSuchOrganizationException(Exception):
         super(NoSuchOrganizationException, self).__init__("Unknown organization '%s'" % organization)
 
 
-class GithubHookEndpoint(object):
+class GithubHook(AbstractWebHook):
 
     eventSource = "Github"
     payloadHeader = "X-GitHub-Event"
@@ -33,20 +36,21 @@ class GithubHookEndpoint(object):
     _handlers = {}
     """:type : dict[str, list[AbstractGithubHandler]]"""
 
-    def __init__(self, config):
-        self.__config = config
-
+    def __init__(self):
         self._organizations = {}
 
         # TODO: https://github.com/organizations/nuxeo-sandbox/settings/applications
         self.github = Github("")
+
+    def can_handle(self, headers, body):
+        return GithubHook.payloadHeader in headers
 
     @property
     def config(self):
         """
         :rtype: nxtools.hooks.services.config.Config
         """
-        return self.__config
+        return services.get(Config)
 
     @staticmethod
     def add_handler(event, handler):
@@ -54,10 +58,10 @@ class GithubHookEndpoint(object):
         @type event : str
         @type handler : nxtools.hooks.endpoints.github_hook.AbstractGithubHandler
         """
-        if event not in GithubHookEndpoint._handlers:
-            GithubHookEndpoint._handlers[event] = [handler]
+        if event not in GithubHook._handlers:
+            GithubHook._handlers[event] = [handler]
         else:
-            GithubHookEndpoint._handlers[event].append(handler)
+            GithubHook._handlers[event].append(handler)
 
     @staticmethod
     def get_handlers(event):
@@ -65,7 +69,7 @@ class GithubHookEndpoint(object):
         :rtype: list[nxtools.hooks.endpoints.github_hook.AbstractGithubHandler]
         @type event : str
         """
-        return GithubHookEndpoint._handlers[event] if event in GithubHookEndpoint._handlers else []
+        return GithubHook._handlers[event] if event in GithubHook._handlers else []
 
     def get_organization(self, name):
         """
@@ -84,9 +88,9 @@ class GithubHookEndpoint(object):
         @type body : str
         """
 
-        if GithubHookEndpoint.payloadHeader in headers:
-            payload_event = headers[GithubHookEndpoint.payloadHeader]
-            handlers = GithubHookEndpoint.get_handlers(payload_event)
+        if GithubHook.payloadHeader in headers:
+            payload_event = headers[GithubHook.payloadHeader]
+            handlers = GithubHook.get_handlers(payload_event)
 
             if handlers:
                 json_body = json.loads(body)

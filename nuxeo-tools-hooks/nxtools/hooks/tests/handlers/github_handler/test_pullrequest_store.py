@@ -1,4 +1,4 @@
-from nxtools.hooks.endpoints.github_handlers.pullrequest_store import GithubStorePullRequestHandler
+from nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_store import GithubStorePullRequestHandler
 from nxtools.hooks.entities.github_entities import PullRequestEvent
 from nxtools.hooks.entities.nuxeo_qa import StoredPullRequest
 from nxtools.hooks.services.database import DatabaseService
@@ -26,7 +26,7 @@ class GithubStorePullRequestHandlerTest(GithubHandlerTest):
     @property
     def handler(self):
         """
-        :rtype: nxtools.hooks.endpoints.github_handlers.pullrequest_store.GithubStorePullRequestHandler
+        :rtype: nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_store.GithubStorePullRequestHandler
         """
         return self._handler
 
