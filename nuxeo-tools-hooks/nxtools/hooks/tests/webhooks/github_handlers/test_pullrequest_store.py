@@ -2,10 +2,10 @@ from nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_store import Gi
 from nxtools.hooks.entities.github_entities import PullRequestEvent
 from nxtools.hooks.entities.nuxeo_qa import StoredPullRequest
 from nxtools.hooks.services.database import DatabaseService
-from nxtools.hooks.tests.handlers.test_github import GithubHandlerTest
+from nxtools.hooks.tests.webhooks.github_handlers import GithubHookHandlerTest
 
 
-class GithubStorePullRequestHandlerTest(GithubHandlerTest):
+class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
 
     def __init__(self, methodName='runTest'):
         super(GithubStorePullRequestHandlerTest, self).__init__(methodName)
@@ -31,7 +31,7 @@ class GithubStorePullRequestHandlerTest(GithubHandlerTest):
         return self._handler
 
     def test_store_pull_request(self):
-        with GithubHandlerTest.payload_file('github_pullrequest_open') as payload:
+        with GithubHookHandlerTest.payload_file('github_pullrequest_open') as payload:
             body = self.get_json_body_from_payload(payload)
 
             event = PullRequestEvent(None, None, body, True)

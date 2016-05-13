@@ -4,11 +4,12 @@ import json
 from mock.mock import Mock
 from nxtools.hooks.entities.github_entities import PushEvent
 from nxtools.hooks.entities.github_entities import RepositoryWrapper
-from nxtools.hooks.tests.handlers.test_github import GithubHandlerTest
+from nxtools.hooks.tests.webhooks.github_handlers import GithubHookHandlerTest
+from nxtools.hooks.tests.webhooks.test_webhook import WebhooksTest
 from nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail import GithubPushNotifyMailHandler
 
 
-class GithubNotifyMailHandlerTest(GithubHandlerTest):
+class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
     def __init__(self, methodName='runTest'):
         super(GithubNotifyMailHandlerTest, self).__init__(methodName)
@@ -39,7 +40,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
         return self._email_service
 
     def test_bad_branch_payload(self):
-        with GithubHandlerTest.payload_file('github_push') as payload:
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
 
             self.assertTrue(body["ref"])
@@ -51,7 +52,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
             self.email_service.sendemail.assert_not_called()
 
     def test_ignored_stable_branch_payload(self):
-        with GithubHandlerTest.payload_file('github_push') as payload:
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
             self.handler.hook.config._config.set(self.handler.config_section, "ignored_branches", "stable")
             self.handler.hook.config._config.set(self.handler.config_section, "ignore_checks",
@@ -77,7 +78,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
                 branch))
 
     def test_ignored_snapshot_branch_payload(self):
-        with GithubHandlerTest.payload_file('github_push') as payload:
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
             self.handler.hook.config._config.set(self.handler.config_section, "ignored_branch_suffixes", "-SNAPSHOT")
             self.handler.hook.config._config.set(self.handler.config_section, "ignore_checks",
@@ -103,7 +104,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
                 branch))
 
     def test_jenkins_ignored_payload(self):
-        with GithubHandlerTest.payload_file('github_push') as payload:
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
             self.handler.hook.config._config.set(self.handler.config_section, "ignored_branches", "stable")
 
@@ -123,7 +124,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
             self.assertTrue(self.handler.is_jenkins(event))
 
     def test_jenkins_payload(self):
-        with GithubHandlerTest.payload_file('github_push') as payload:
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
 
             self.assertTrue(body["pusher"])
@@ -153,7 +154,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
                 branch))
 
     def test_jenkins_payload_via_jenkins(self):
-        with GithubHandlerTest.payload_file('github_push') as payload:
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
 
             self.assertTrue(body["pusher"])
@@ -183,7 +184,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
             self.assertRegexpMatches(email.body, 'Author: Jenkins Nuxeo <jenkins@nuxeo.com>')
 
     def test_payload_with_accents(self):
-        with GithubHandlerTest.payload_file('github_push') as payload:
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
 
             self.assertTrue(body["commits"][0])
@@ -205,7 +206,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
                 event.ref[11:]))
 
     def test_private_repository(self):
-        with GithubHandlerTest.payload_file('github_push') as payload:
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
 
             self.assertTrue(body["repository"])
@@ -216,7 +217,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
             self.assertEqual(email.to, "interne-checkins@lists.nuxeo.com")
 
     def test_diff_retriever(self):
-        with GithubHandlerTest.payload_file('github_push') as payload:
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
 
             event = PushEvent(None, None, body, True)
@@ -230,7 +231,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
                                      event.commits[0].url)
 
     def test_jira_regexp(self):
-        with GithubHandlerTest.payload_file('github_push') as payload:
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
 
             self.assertTrue(body["commits"][0])
@@ -249,7 +250,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
             self.assertRegexpMatches(email.body, 'JIRA: https://jira.nuxeo.com/browse/NXS-1234')
 
     def test_jenkins_payload_with_ignore(self):
-        with GithubHandlerTest.payload_file('github_push') as payload:
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
             self.handler.hook.config._config.set(self.handler.config_section, "ignored_repositories",
                                                  "qapriv.nuxeo.org-conf")
@@ -290,7 +291,7 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
             self.email_service.sendemail.assert_called_once()
 
     def test_standard_payload(self):
-        with GithubHandlerTest.payload_file('github_push') as payload:
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
 
             self.assertTrue(body["commits"][0])
@@ -298,8 +299,8 @@ class GithubNotifyMailHandlerTest(GithubHandlerTest):
 
             self.assertTupleEqual((False, False, None), self.handler.check_branch_ignored(event))
 
-            with open('nxtools/hooks/tests/resources/github_hooks/github_push.commit.diff') as diff_file, \
-                    open('nxtools/hooks/tests/resources/github_hooks/github_push.email.txt') as email_file:
+            with open('nxtools/hooks/tests/resources/github_handlers/github_push.commit.diff') as diff_file, \
+                    open('nxtools/hooks/tests/resources/github_handlers/github_push.email.txt') as email_file:
                 self.mocks.requester.requestJson.return_value = diff_file.read()
                 self.mocks.repository_url.return_value = event.repository.url
 
