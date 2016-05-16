@@ -19,13 +19,13 @@ class ServiceContainer(object):
             return [raw_value for raw_type, raw_name, raw_value in self.list(clazz)][0]
 
     def list(self, clazz):
-        for raw_type, raw_name, raw_value in self.__raw:
-            if issubclass(raw_type, clazz):
-                value = raw_type, raw_name, raw_value()
-                if value not in self.__values:
-                    self.__values.append(value)
 
-        return [(raw_type, raw_name, raw_value) for raw_type, raw_name, raw_value in self.__values if clazz == raw_type]
+        self.__values.extend([(raw_type, raw_name, raw_value()) for raw_type, raw_name, raw_value in self.__raw
+                              if issubclass(raw_type, clazz) and
+                              (raw_type, raw_name) not in [(t, n) for t, n, v in self.__values]])
+
+        return [(raw_type, raw_name, raw_value) for raw_type, raw_name, raw_value in self.__values
+                if issubclass(raw_type, clazz)]
 
     def add(self, service, name=None):
         if isinstance(service, type) or isinstance(service, ClassType):
