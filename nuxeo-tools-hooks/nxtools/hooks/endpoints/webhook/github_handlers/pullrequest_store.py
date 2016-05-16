@@ -5,14 +5,13 @@ from nxtools.hooks.entities.nuxeo_qa import StoredPullRequest
 
 class GithubStorePullRequestHandler(AbstractGithubHandler):
 
-    def __init__(self, hook, db_service):
+    MSG_OK = "OK"
+
+    def __init__(self, hook):
         """
         :type hook : nxtools.hooks.endpoints.github_hook.GithubHookEndpoint
-        :type db_service : nxtools.hooks.services.database.DatabaseService
         """
         super(GithubStorePullRequestHandler, self).__init__(hook)
-
-        self._db_service = db_service
 
     def handle(self, payload_body):
         event = PullRequestEvent(None, None, payload_body, True)
@@ -26,4 +25,4 @@ class GithubStorePullRequestHandler(AbstractGithubHandler):
 
         stored_pr.save()
 
-
+        return 200, GithubStorePullRequestHandler.MSG_OK

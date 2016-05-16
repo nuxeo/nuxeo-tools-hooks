@@ -47,7 +47,7 @@ class WebHookEndpoint(AbstractEndpoint):
         self.__handlers.append(handler)
 
     @staticmethod
-    @__blueprint.route('/')
+    @__blueprint.route('/', methods=['POST'])
     def route():
         self = services.get(WebHookEndpoint)
 

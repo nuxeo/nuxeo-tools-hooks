@@ -1,6 +1,7 @@
 # coding=UTF-8
 
 import json
+from io import StringIO
 
 from github.MainClass import Github
 from github.GithubException import UnknownObjectException
@@ -94,8 +95,14 @@ class GithubHook(AbstractWebHook):
 
             if handlers:
                 json_body = json.loads(body)
+                response = StringIO()
+                status = 200
 
                 for handler in handlers:
-                    handler.handle(json_body)
+                    s, r = handler.handle(json_body)
+                    response.writelines(unicode(r))
+                    status = max(status, s)
+
+                return response.getvalue(), status
             else:
                 raise UnknownEventException(payload_event)
