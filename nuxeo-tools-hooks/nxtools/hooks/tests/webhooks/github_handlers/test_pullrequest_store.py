@@ -1,3 +1,4 @@
+from nxtools import services
 from nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_store import GithubStorePullRequestHandler
 from nxtools.hooks.entities.github_entities import PullRequestEvent
 from nxtools.hooks.entities.nuxeo_qa import StoredPullRequest
@@ -7,11 +8,6 @@ from nxtools.hooks.tests.webhooks.github_handlers import GithubHookHandlerTest
 
 class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
 
-    def __init__(self, methodName='runTest'):
-        super(GithubStorePullRequestHandlerTest, self).__init__(methodName)
-
-        self._db_service = None
-
     def setUp(self):
         super(GithubStorePullRequestHandlerTest, self).setUp()
         self.db_service.connect()
@@ -19,9 +15,7 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
 
     @property
     def db_service(self):
-        if not self._db_service:
-            self._db_service = DatabaseService(self.hook.config)
-        return self._db_service
+        return services.get(DatabaseService)
 
     @property
     def handler(self):

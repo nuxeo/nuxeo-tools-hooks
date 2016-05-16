@@ -11,7 +11,6 @@ class WebhooksTest(HooksTestCase):
     def setUp(self):
         super(WebhooksTest, self).setUp()
         self.flask = Flask(__name__)
-        services.add(WebHookEndpoint())
 
     def test_routing(self):
         endpoint = services.get(WebHookEndpoint)
@@ -33,7 +32,7 @@ class WebhooksTest(HooksTestCase):
 
     def test_github(self):
         hook = GithubHook()
-        hook.add_handler("push", GithubPushNotifyMailHandler(hook, self.mocks.email_service))
+        hook.add_handler("push", GithubPushNotifyMailHandler(hook))
         with self.assertRaises(UnknownEventException):
             hook.handle({GithubHook.payloadHeader: "Unknown"}, "{}")
 

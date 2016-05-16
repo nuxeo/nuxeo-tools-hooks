@@ -1,0 +1,3 @@
+
+class AbstractEndpoint(object):
+    pass

@@ -1,13 +1,13 @@
 from mongoengine.connection import connect
+from nxtools import ServiceContainer, services
+from nxtools.hooks.services.config import Config
 
 
+@ServiceContainer.service
 class DatabaseService(object):
 
-    def __init__(self, config):
-        """
-        :type config : nxtools.hooks.services.config.Config
-        """
-        self._config = config
+    def __init__(self):
+        self._config = services.get(Config)
 
     @property
     def config_section(self):

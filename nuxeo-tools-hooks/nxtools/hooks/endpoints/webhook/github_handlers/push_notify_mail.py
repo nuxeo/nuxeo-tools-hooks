@@ -3,10 +3,12 @@ from importlib import import_module
 import re
 from jinja2.environment import Environment
 from jinja2.loaders import PackageLoader
+from nxtools import services
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
 from nxtools.hooks.endpoints.webhook.github_hook import InvalidPayloadException
 from nxtools.hooks.entities.github_entities import PushEvent
 from nxtools.hooks.entities.mail import Email
+from nxtools.hooks.services.mail import EmailService
 from unidecode import unidecode
 
 
@@ -19,14 +21,11 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
 
     JENKINS_PUSHER_NAME = "nuxeojenkins"
 
-    def __init__(self, hook, email_service):
+    def __init__(self, hook):
         """
         :type hook : nxtools.hooks.endpoints.github_hook.GithubHookEndpoint
-        :type email_service : nxtools.hooks.services.mail.EmailService
         """
         super(GithubPushNotifyMailHandler, self).__init__(hook)
-
-        self._email_service = email_service
 
         self._jinja = Environment(loader=PackageLoader(GithubPushNotifyMailHandler.__module__, 'resources'))
 
@@ -106,6 +105,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
 
     def handle(self, payload_body):
         event = PushEvent(None, None, payload_body, True)
+        email_service = services.get(EmailService)
 
         if self.is_bad_ref(event):
             return 400, GithubPushNotifyMailHandler.MSG_BAD_REF % event.ref
@@ -117,7 +117,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
 
         for commit in event.commits:
             email = self.get_commit_email(event, commit, add_warn)
-            self._email_service.sendemail(email)
+            email_service.sendemail(email)
 
         return 200, GithubPushNotifyMailHandler.MSG_OK
 

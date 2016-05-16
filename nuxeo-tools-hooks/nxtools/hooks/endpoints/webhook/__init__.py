@@ -2,7 +2,8 @@ from abc import ABCMeta, abstractmethod
 
 from flask.blueprints import Blueprint
 from flask.globals import request
-from nxtools import services
+from nxtools import services, ServiceContainer
+from nxtools.hooks.endpoints import AbstractEndpoint
 from nxtools.hooks.services.config import Config
 
 
@@ -18,7 +19,8 @@ class NoSuchHookException(Exception):
     pass
 
 
-class WebHookEndpoint(object):
+@ServiceContainer.service
+class WebHookEndpoint(AbstractEndpoint):
 
     __blueprint = Blueprint('webhook', __name__)
 
@@ -54,6 +56,3 @@ class WebHookEndpoint(object):
                 return handler.handle(request.headers, request.data)
 
         raise NoSuchHookException()
-
-        # return self.config.get(self.config_section, "key", "Hello World")
-

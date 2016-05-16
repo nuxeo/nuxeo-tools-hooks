@@ -1,14 +1,22 @@
 from email.mime.text import MIMEText
-
+from nxtools import ServiceContainer, services
+from nxtools.hooks.services.config import Config
 from smtplib import SMTP, SMTP_PORT
 
 
+@ServiceContainer.service
 class EmailService(object):
 
-    def __init__(self, host, port=SMTP_PORT):
+    def __init__(self):
+        config = services.get(Config)
+
         self._smtp = SMTP()
-        self._host = host
-        self._port = port
+        self._host = config.get(self.config_section, "host", "localhost")
+        self._port = config.get(self.config_section, "port", SMTP_PORT)
+
+    @property
+    def config_section(self):
+        return type(self).__name__
 
     def sendemail(self, email):
         """

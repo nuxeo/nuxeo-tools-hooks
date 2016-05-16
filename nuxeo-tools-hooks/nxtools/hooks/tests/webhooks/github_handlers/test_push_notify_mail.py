@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-import json
-
-from mock.mock import Mock
+from mock.mock import Mock, patch
+from nxtools import services
 from nxtools.hooks.entities.github_entities import PushEvent
 from nxtools.hooks.entities.github_entities import RepositoryWrapper
+from nxtools.hooks.services.mail import EmailService
 from nxtools.hooks.tests.webhooks.github_handlers import GithubHookHandlerTest
-from nxtools.hooks.tests.webhooks.test_webhook import WebhooksTest
 from nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail import GithubPushNotifyMailHandler
 
 
@@ -14,11 +13,13 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
     def __init__(self, methodName='runTest'):
         super(GithubNotifyMailHandlerTest, self).__init__(methodName)
 
-        self._email_service = None
-
     def setUp(self):
         super(GithubNotifyMailHandlerTest, self).setUp()
-        self._handler = GithubPushNotifyMailHandler(self.hook, self.email_service)
+
+        patcher = patch("nxtools.hooks.services.mail.EmailService.sendemail", Mock())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self._handler = GithubPushNotifyMailHandler(self.hook)
 
     def get_event_from_body(self, body):
         """
@@ -35,9 +36,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
     @property
     def email_service(self):
-        if not self._email_service:
-            self._email_service = Mock()
-        return self._email_service
+        return services.get(EmailService)
 
     def test_bad_branch_payload(self):
         with GithubHookHandlerTest.payload_file('github_push') as payload:
