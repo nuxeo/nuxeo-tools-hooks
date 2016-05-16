@@ -12,6 +12,9 @@ class GithubStorePullRequestHandler(AbstractGithubHandler):
     def __init__(self):
         super(GithubStorePullRequestHandler, self).__init__()
 
+    def can_handle(self, payload_event):
+        return "pull_request" == payload_event
+
     def handle(self, payload_body):
         event = PullRequestEvent(None, None, payload_body, True)
 

@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 from mock.mock import Mock, patch
 from nxtools import services
+from nxtools.hooks.endpoints.webhook.github_hook import GithubHook
 from nxtools.hooks.entities.github_entities import PushEvent
 from nxtools.hooks.entities.github_entities import RepositoryWrapper
+from nxtools.hooks.services.config import Config
 from nxtools.hooks.services.mail import EmailService
 from nxtools.hooks.tests.webhooks.github_handlers import GithubHookHandlerTest
 from nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail import GithubPushNotifyMailHandler
@@ -32,7 +34,17 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
     @property
     def email_service(self):
+        """
+        :rtype: nxtools.hooks.services.mail.EmailService
+        """
         return services.get(EmailService)
+
+    @property
+    def config(self):
+        """
+        :rtype: nxtools.hooks.services.config.Config
+        """
+        return services.get(Config)
 
     def test_bad_branch_payload(self):
         with GithubHookHandlerTest.payload_file('github_push') as payload:
@@ -49,8 +61,8 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
     def test_ignored_stable_branch_payload(self):
         with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
-            self.handler.hook.config._config.set(self.handler.config_section, "ignored_branches", "stable")
-            self.handler.hook.config._config.set(self.handler.config_section, "ignore_checks",
+            self.config._config.set(self.handler.config_section, "ignored_branches", "stable")
+            self.config._config.set(self.handler.config_section, "ignore_checks",
                                                  "nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail."
                                                  "branch_ignore")
 
@@ -75,8 +87,8 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
     def test_ignored_snapshot_branch_payload(self):
         with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
-            self.handler.hook.config._config.set(self.handler.config_section, "ignored_branch_suffixes", "-SNAPSHOT")
-            self.handler.hook.config._config.set(self.handler.config_section, "ignore_checks",
+            self.config._config.set(self.handler.config_section, "ignored_branch_suffixes", "-SNAPSHOT")
+            self.config._config.set(self.handler.config_section, "ignore_checks",
                                                  "nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail."
                                                  "suffix_ignore")
 
@@ -101,7 +113,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
     def test_jenkins_ignored_payload(self):
         with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
-            self.handler.hook.config._config.set(self.handler.config_section, "ignored_branches", "stable")
+            self.config._config.set(self.handler.config_section, "ignored_branches", "stable")
 
             self.assertTrue(body["ref"])
             self.assertTrue(body["pusher"])
@@ -247,9 +259,9 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
     def test_jenkins_payload_with_ignore(self):
         with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
-            self.handler.hook.config._config.set(self.handler.config_section, "ignored_repositories",
+            self.config._config.set(self.handler.config_section, "ignored_repositories",
                                                  "qapriv.nuxeo.org-conf")
-            self.handler.hook.config._config.set(self.handler.config_section, "ignore_checks",
+            self.config._config.set(self.handler.config_section, "ignore_checks",
                                                  "nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail."
                                                  "repository_ignore")
 

@@ -5,7 +5,7 @@ from jinja2.environment import Environment
 from jinja2.loaders import PackageLoader
 from nxtools import services, ServiceContainer
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
-from nxtools.hooks.endpoints.webhook.github_hook import InvalidPayloadException
+from nxtools.hooks.endpoints.webhook.github_hook import InvalidPayloadException, GithubHook
 from nxtools.hooks.entities.github_entities import PushEvent
 from nxtools.hooks.entities.mail import Email
 from nxtools.hooks.services.mail import EmailService
@@ -101,6 +101,9 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
     def email_template(self):
         return self.get_config("jinja_template", "notify_mail.txt")
 
+    def can_handle(self, payload_event):
+        return "push" == payload_event
+
     def handle(self, payload_body):
         event = PushEvent(None, None, payload_body, True)
         email_service = services.get(EmailService)
@@ -167,7 +170,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
             jira_tickets.append(match.group(1).upper())
 
         try:
-            diff = self.hook.get_organization(event.organization.login).get_repo(event.repository.name).\
+            diff = services.get(GithubHook).get_organization(event.organization.login).get_repo(event.repository.name).\
                 get_commit_diff(commit.id)
         except Exception as e:
             diff = "Could not read diff - see %s.diff for raw diff" % commit.url
