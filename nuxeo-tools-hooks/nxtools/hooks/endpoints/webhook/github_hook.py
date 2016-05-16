@@ -5,7 +5,7 @@ from io import StringIO
 
 from github.MainClass import Github
 from github.GithubException import UnknownObjectException
-from nxtools import services
+from nxtools import services, ServiceContainer
 from nxtools.hooks.endpoints.webhook import AbstractWebHook
 from nxtools.hooks.entities.github_entities import OrganizationWrapper
 from nxtools.hooks.services.config import Config
@@ -28,6 +28,7 @@ class NoSuchOrganizationException(Exception):
         super(NoSuchOrganizationException, self).__init__("Unknown organization '%s'" % organization)
 
 
+@ServiceContainer.service
 class GithubHook(AbstractWebHook):
 
     eventSource = "Github"

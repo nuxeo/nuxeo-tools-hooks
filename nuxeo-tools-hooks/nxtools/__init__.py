@@ -19,9 +19,8 @@ class ServiceContainer(object):
             return [raw_value for raw_type, raw_name, raw_value in self.list(clazz)][0]
 
     def list(self, clazz):
-
         for raw_type, raw_name, raw_value in self.__raw:
-            if clazz == raw_type:
+            if issubclass(raw_type, clazz):
                 value = raw_type, raw_name, raw_value()
                 if value not in self.__values:
                     self.__values.append(value)
@@ -35,5 +34,8 @@ class ServiceContainer(object):
         else:
             name = name if name else service.__module__ + "." + type(service).__name__
             self.__raw.append((type(service), name, lambda: service))
+
+    def reload(self):
+        del self.__values[:]
 
 services = ServiceContainer()

@@ -32,7 +32,7 @@ class GithubHookHandlerTest(HooksTestCase):
     def setUp(self):
         super(GithubHookHandlerTest, self).setUp()
 
-        self.hook = GithubHook()
+        self.hook = services.get(GithubHook)
         services.add(Config("nxtools/hooks/tests/resources/github_handlers/config.ini"))
 
         self.maxDiff = None

@@ -32,7 +32,7 @@ class WebhooksTest(HooksTestCase):
 
     def test_github(self):
         hook = GithubHook()
-        hook.add_handler("push", GithubPushNotifyMailHandler(hook))
+        hook.add_handler("push", GithubPushNotifyMailHandler())
         with self.assertRaises(UnknownEventException):
             hook.handle({GithubHook.payloadHeader: "Unknown"}, "{}")
 

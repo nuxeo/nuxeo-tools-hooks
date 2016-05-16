@@ -3,7 +3,7 @@ from importlib import import_module
 import re
 from jinja2.environment import Environment
 from jinja2.loaders import PackageLoader
-from nxtools import services
+from nxtools import services, ServiceContainer
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
 from nxtools.hooks.endpoints.webhook.github_hook import InvalidPayloadException
 from nxtools.hooks.entities.github_entities import PushEvent
@@ -12,6 +12,7 @@ from nxtools.hooks.services.mail import EmailService
 from unidecode import unidecode
 
 
+@ServiceContainer.service
 class GithubPushNotifyMailHandler(AbstractGithubHandler):
 
     MSG_BAD_REF = "Unknown branch reference '%s'"
@@ -21,11 +22,8 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
 
     JENKINS_PUSHER_NAME = "nuxeojenkins"
 
-    def __init__(self, hook):
-        """
-        :type hook : nxtools.hooks.endpoints.github_hook.GithubHookEndpoint
-        """
-        super(GithubPushNotifyMailHandler, self).__init__(hook)
+    def __init__(self):
+        super(GithubPushNotifyMailHandler, self).__init__()
 
         self._jinja = Environment(loader=PackageLoader(GithubPushNotifyMailHandler.__module__, 'resources'))
 

@@ -1,17 +1,16 @@
+from nxtools import ServiceContainer
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
 from nxtools.hooks.entities.github_entities import PullRequestEvent
 from nxtools.hooks.entities.nuxeo_qa import StoredPullRequest
 
 
+@ServiceContainer.service
 class GithubStorePullRequestHandler(AbstractGithubHandler):
 
     MSG_OK = "OK"
 
-    def __init__(self, hook):
-        """
-        :type hook : nxtools.hooks.endpoints.github_hook.GithubHookEndpoint
-        """
-        super(GithubStorePullRequestHandler, self).__init__(hook)
+    def __init__(self):
+        super(GithubStorePullRequestHandler, self).__init__()
 
     def handle(self, payload_body):
         event = PullRequestEvent(None, None, payload_body, True)

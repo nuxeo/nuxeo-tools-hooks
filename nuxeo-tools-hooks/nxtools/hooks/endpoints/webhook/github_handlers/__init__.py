@@ -1,11 +1,12 @@
 from abc import ABCMeta, abstractmethod
+from nxtools import services
+from nxtools.hooks.endpoints.webhook.github_hook import GithubHook
 
 
 class AbstractGithubHandler(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, hook):
-        self.__hook = hook
+    def __init__(self):
         self.__config_section = type(self).__name__
 
     @abstractmethod
@@ -17,7 +18,7 @@ class AbstractGithubHandler(object):
         """
         :rtype: nxtools.hooks.endpoints.github_hook.GithubHookEndpoint
         """
-        return self.__hook
+        return services.get(GithubHook)
 
     @property
     def config_section(self):

@@ -1,6 +1,7 @@
 import unittest
 
 from mock.mock import Mock, patch
+from nxtools import services
 
 
 class TestMocks(object):
@@ -18,3 +19,6 @@ class HooksTestCase(unittest.TestCase):
 
     def setUp(self):
         self.mocks = TestMocks()
+
+    def tearDown(self):
+        services.reload()

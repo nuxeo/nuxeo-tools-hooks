@@ -10,16 +10,12 @@ from nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail import Git
 
 class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
-    def __init__(self, methodName='runTest'):
-        super(GithubNotifyMailHandlerTest, self).__init__(methodName)
-
     def setUp(self):
         super(GithubNotifyMailHandlerTest, self).setUp()
 
         patcher = patch("nxtools.hooks.services.mail.EmailService.sendemail", Mock())
         patcher.start()
         self.addCleanup(patcher.stop)
-        self._handler = GithubPushNotifyMailHandler(self.hook)
 
     def get_event_from_body(self, body):
         """
@@ -32,7 +28,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
         """
         :rtype: nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
         """
-        return self._handler
+        return services.get(GithubPushNotifyMailHandler)
 
     @property
     def email_service(self):

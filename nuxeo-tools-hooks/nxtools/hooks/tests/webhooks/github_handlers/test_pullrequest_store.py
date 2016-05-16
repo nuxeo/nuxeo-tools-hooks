@@ -10,19 +10,15 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
 
     def setUp(self):
         super(GithubStorePullRequestHandlerTest, self).setUp()
-        self.db_service.connect()
-        self._handler = GithubStorePullRequestHandler(self.hook, self.db_service)
 
-    @property
-    def db_service(self):
-        return services.get(DatabaseService)
+        services.get(DatabaseService).connect()
 
     @property
     def handler(self):
         """
         :rtype: nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_store.GithubStorePullRequestHandler
         """
-        return self._handler
+        return services.get(GithubStorePullRequestHandler)
 
     def test_store_pull_request(self):
         with GithubHookHandlerTest.payload_file('github_pullrequest_open') as payload:
