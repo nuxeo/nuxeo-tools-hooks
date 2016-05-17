@@ -30,10 +30,12 @@ class ServiceContainer(object):
     def add(self, service, name=None):
         if isinstance(service, type) or isinstance(service, ClassType):
             name = name if name else service.__module__ + "." + service.__name__
-            self.__raw.append((service, name, lambda: service()))
+            if name not in [n for t, n, v in self.list(service)]:
+                self.__raw.append((service, name, lambda: service()))
         else:
             name = name if name else service.__module__ + "." + type(service).__name__
-            self.__raw.append((type(service), name, lambda: service))
+            if name not in [n for t, n, v in self.list(type(service))]:
+                self.__raw.append((type(service), name, lambda: service))
 
     def reload(self):
         del self.__values[:]
