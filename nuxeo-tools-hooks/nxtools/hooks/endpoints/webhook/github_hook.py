@@ -1,12 +1,15 @@
 # coding=UTF-8
 
 import json
-from io import StringIO
+import pkgutil
+import sys
+import types
 
 from github.MainClass import Github
 from github.GithubException import UnknownObjectException
+from io import StringIO
 from nxtools import services, ServiceContainer
-from nxtools.hooks.endpoints.webhook import AbstractWebHook
+from nxtools.hooks.endpoints.webhook import AbstractWebHook, github_handlers
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
 from nxtools.hooks.entities.github_entities import OrganizationWrapper
 from nxtools.hooks.services.config import Config
@@ -43,6 +46,13 @@ class GithubHook(AbstractWebHook):
 
         # TODO: https://github.com/organizations/nuxeo-sandbox/settings/applications
         self.github = Github("")
+
+        loaded = [key for key, value in sys.modules.items()
+                  if key.startswith(github_handlers.__name__) and isinstance(value, types.ModuleType)]
+
+        for loader, module_name, is_pkg in pkgutil.iter_modules(github_handlers.__path__, github_handlers.__name__ + "."):
+            if module_name not in loaded:
+                loader.find_module(module_name).load_module(module_name)
 
     def can_handle(self, headers, body):
         return GithubHook.payloadHeader in headers
