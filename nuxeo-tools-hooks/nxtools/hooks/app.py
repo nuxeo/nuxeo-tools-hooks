@@ -6,6 +6,7 @@ import os
 from flask.app import Flask
 from nxtools import services
 from nxtools.hooks import DEFAULTSECT
+from nxtools.hooks.endpoints.api import ApiEndpoint
 from nxtools.hooks.endpoints.webhook import WebHookEndpoint
 from nxtools.hooks.services.config import Config
 from nxtools.hooks.services.database import DatabaseService
@@ -35,6 +36,7 @@ class ToolsHooksApp(object):
         services.get(DatabaseService).connect()
 
         app.register_blueprint(WebHookEndpoint.blueprint(), url_prefix="/hook")
+        app.register_blueprint(ApiEndpoint.blueprint(), url_prefix="/api")
 
         app.run(
             host=self.config.get(DEFAULTSECT, "listen_address", "0.0.0.0"),
