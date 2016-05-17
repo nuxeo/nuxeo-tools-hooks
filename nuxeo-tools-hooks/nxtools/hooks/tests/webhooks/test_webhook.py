@@ -1,7 +1,9 @@
+import json
+
 from flask.app import Flask
+from mock.mock import patch
 from nxtools import services
 from nxtools.hooks.endpoints.webhook import WebHookEndpoint, NoSuchHookException
-from nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail import GithubPushNotifyMailHandler
 from nxtools.hooks.endpoints.webhook.github_hook import GithubHook, UnknownEventException, InvalidPayloadException
 from nxtools.hooks.tests.case import HooksTestCase
 
@@ -16,19 +18,24 @@ class WebhooksTest(HooksTestCase):
         endpoint = services.get(WebHookEndpoint)
         """:type : WebHookEndpoint"""
 
-        endpoint.add_handler(self.mocks.handler)
+        with open('nxtools/hooks/tests/resources/github_handlers/github_pullrequest_open.headers.json') \
+                as headers_file, \
+                open('nxtools/hooks/tests/resources/github_handlers/github_pullrequest_open.json') as body_file, \
+                self.flask.test_request_context("/", headers=json.load(headers_file), data=body_file.read()), \
+                patch("nxtools.hooks.endpoints.webhook.github_hook.GithubHook.can_handle", self.mocks.can_handle),\
+                patch("nxtools.hooks.endpoints.webhook.github_hook.GithubHook.handle", self.mocks.handle):
 
-        with self.flask.test_request_context("/"):
-            self.mocks.handler.can_handle.return_value = False
+            self.mocks.can_handle.return_value = False
+
             with self.assertRaises(NoSuchHookException):
                 endpoint.route()
-            self.mocks.handler.can_handle.assert_called_once()
-            self.mocks.handler.handle.assert_not_called()
+            self.mocks.can_handle.assert_called_once()
+            self.mocks.handle.assert_not_called()
 
-            self.mocks.handler.can_handle.return_value = True
+            self.mocks.can_handle.return_value = True
             endpoint.route()
-            self.assertEqual(2, self.mocks.handler.can_handle.call_count)
-            self.mocks.handler.handle.assert_called_once()
+            self.assertEqual(2, self.mocks.can_handle.call_count)
+            self.mocks.handle.assert_called_once()
 
     def test_github(self):
         hook = GithubHook()

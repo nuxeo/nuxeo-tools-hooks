@@ -54,6 +54,10 @@ class GithubHook(AbstractWebHook):
         """
         return services.get(Config)
 
+    @property
+    def handlers(self):
+        return [handler for t, n, handler in services.list(AbstractGithubHandler)]
+
     def get_organization(self, name):
         """
         :rtype: nxtools.hooks.entities.github_entities.OrganizationWrapper
@@ -73,8 +77,7 @@ class GithubHook(AbstractWebHook):
 
         if GithubHook.payloadHeader in headers:
             payload_event = headers[GithubHook.payloadHeader]
-            handlers = [handler for t, n, handler in services.list(AbstractGithubHandler)
-                        if handler.can_handle(payload_event)]
+            handlers = [handler for handler in self.handlers if handler.can_handle(payload_event)]
 
             if handlers:
                 json_body = json.loads(body)

@@ -9,9 +9,6 @@ class GithubStorePullRequestHandler(AbstractGithubHandler):
 
     MSG_OK = "OK"
 
-    def __init__(self):
-        super(GithubStorePullRequestHandler, self).__init__()
-
     def can_handle(self, payload_event):
         return "pull_request" == payload_event
 

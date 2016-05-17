@@ -24,9 +24,6 @@ class WebHookEndpoint(AbstractEndpoint):
 
     __blueprint = Blueprint('webhook', __name__)
 
-    def __init__(self):
-        self.__handlers = []
-
     @staticmethod
     def blueprint():
         return WebHookEndpoint.__blueprint
@@ -39,20 +36,15 @@ class WebHookEndpoint(AbstractEndpoint):
     def config_section(self):
         return type(self).__name__
 
-    @property
-    def handlers(self):
-        return self.__handlers
-
-    def add_handler(self, handler):
-        self.__handlers.append(handler)
+    @staticmethod
+    def get_hooks():
+        return [handler for t, n, handler in services.list(AbstractWebHook)]
 
     @staticmethod
     @__blueprint.route('/', methods=['POST'])
     def route():
-        self = services.get(WebHookEndpoint)
-
-        for handler in self.handlers:
-            if handler.can_handle(request.headers, request.data):
-                return handler.handle(request.headers, request.data)
+        for handler in [handler for handler in WebHookEndpoint.get_hooks()
+                        if handler.can_handle(request.headers, request.data)]:
+            return handler.handle(request.headers, request.data)
 
         raise NoSuchHookException()
