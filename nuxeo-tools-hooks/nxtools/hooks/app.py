@@ -22,8 +22,7 @@ class ToolsHooksApp(object):
     def config(self):
         return services.get(Config)
 
-    def run(self):
-
+    def setup(self):
         log_file = self.config.get(DEFAULTSECT, "log_file")
         if log_file and not os.path.exists(os.path.dirname(log_file)):
             os.makedirs(os.path.dirname(log_file))
@@ -32,19 +31,26 @@ class ToolsHooksApp(object):
             filename=log_file,
             level=logging._levelNames[self.config.get(DEFAULTSECT, "log_level", "INFO").upper()])
 
-        app = Flask(__name__)
+        flask = Flask(__name__)
         services.get(DatabaseService).connect()
 
-        app.register_blueprint(WebHookEndpoint.blueprint(), url_prefix="/hook")
-        app.register_blueprint(ApiEndpoint.blueprint(), url_prefix="/api")
+        flask.register_blueprint(WebHookEndpoint.blueprint(), url_prefix="/hook")
+        flask.register_blueprint(ApiEndpoint.blueprint(), url_prefix="/api")
+
+        return flask
+
+    def run(self):
+        app = self.setup()
 
         app.run(
             host=self.config.get(DEFAULTSECT, "listen_address", "0.0.0.0"),
             port=self.config.getint(DEFAULTSECT, "port", 8888),
             debug=self.config.getboolean(DEFAULTSECT, "debug", False))
 
+    def __call__(self, environ, start_response):
+        return self.setup().__call__(environ, start_response)
 
-app = ToolsHooksApp()
+application = ToolsHooksApp()
 
 if __name__ == '__main__':
-    app.run()
+    application.run()

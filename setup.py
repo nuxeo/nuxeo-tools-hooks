@@ -1,23 +1,24 @@
 import codecs
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
-    name='nuxeo-tools-notify-center',
+    name='nuxeo-tools-hooks',
     version='1.0.0.dev1',
-    license='ASLREADME.rst',
+    license='ASL',
     author='Nuxeo',
     author_email='contact@nuxeo.com',
-    description='A simple notification aggregator',
+    description='A aggregator for hooks',
     long_description=codecs.open('README.rst', encoding='utf-8').read(),
-    url='https://github.com/nuxeo-sandbox/nuxeo-tools-notify-center',
+    url='https://github.com/nuxeo/nuxeo-tools-hooks',
     classifiers=[
-        'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
-        'Topic :: System :: Networking',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 2.7'
     ],
     keywords='nuxeo',
+    packages=find_packages("nuxeo-tools-hooks"),
+    package_dir={"nxtools": "nuxeo-tools-hooks/nxtools"},
+    package_data={"nxtools.hooks": ["doc/*"]},
     install_requires=[
         'flask',
         'mock',
