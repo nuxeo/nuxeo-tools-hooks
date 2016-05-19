@@ -4,7 +4,6 @@ from flask.blueprints import Blueprint
 from nxtools import ServiceContainer, services
 from nxtools.hooks.endpoints import AbstractEndpoint
 from nxtools.hooks.entities.nuxeo_qa import StoredPullRequest
-from nxtools.hooks.services.config import Config
 
 
 @ServiceContainer.service
@@ -30,9 +29,7 @@ class ApiEndpoint(AbstractEndpoint):
                                "head_commit": raw_pr.head_commit
                            } for raw_pr in StoredPullRequest.objects()])
 
-    @property
-    def config(self):
-        """
-        :rtype: nxtools.hooks.services.config.Config
-        """
-        return services.get(Config)
+    def get_cors_config(self):
+        return {k: v for k, v in self.config.items(self.config_section, {
+            "cors_origins": "*"
+        }).iteritems() if k.startswith("cors_")}

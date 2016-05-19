@@ -21,6 +21,7 @@ setup(
     package_data={"nxtools.hooks": ["doc/*"]},
     install_requires=[
         'flask',
+        'flask-cors',
         'mock',
         'PyGithub',
         'Jinja2',

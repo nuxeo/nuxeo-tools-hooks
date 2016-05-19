@@ -4,6 +4,7 @@ import logging
 import os
 
 from flask.app import Flask
+from flask.ext.cors.extension import CORS
 from nxtools import services
 from nxtools.hooks import DEFAULTSECT
 from nxtools.hooks.endpoints.api import ApiEndpoint
@@ -35,6 +36,8 @@ class ToolsHooksApp(object):
         services.get(DatabaseService).connect()
 
         flask.register_blueprint(WebHookEndpoint.blueprint(), url_prefix="/hook")
+
+        CORS(ApiEndpoint.blueprint(), **services.get(ApiEndpoint).get_cors_config())
         flask.register_blueprint(ApiEndpoint.blueprint(), url_prefix="/api")
 
         return flask

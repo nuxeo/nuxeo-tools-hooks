@@ -8,7 +8,6 @@ from flask.globals import request
 from nxtools import services, ServiceContainer
 from nxtools.hooks.endpoints import AbstractEndpoint
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
-from nxtools.hooks.services.config import Config
 
 
 class AbstractWebHook(object):
@@ -53,14 +52,6 @@ class WebHookEndpoint(AbstractEndpoint):
             return handler.handle(request.headers, request.data)
 
         raise NoSuchHookException()
-
-    @property
-    def config(self):
-        return services.get(Config)
-
-    @property
-    def config_section(self):
-        return type(self).__name__
 
     @property
     def hooks(self):

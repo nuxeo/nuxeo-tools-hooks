@@ -17,6 +17,13 @@ class Config(object):
             config_value = self._config.get(section, key)
         return os.getenv(Config.ENV_PREFIX + key.upper(), config_value)
 
+    def items(self, section, defaults=None):
+        items = defaults or {}
+        if self._config.has_section(section):
+            items.update({k: v for k, v in self._config.items(section)})
+        items.update({k: os.getenv(Config.ENV_PREFIX + k.upper(), v) for k, v in items.iteritems()})
+        return items
+
     # From ConfigParser.py
 
     _boolean_states = {'1': True, 'yes': True, 'true': True, 'on': True,
