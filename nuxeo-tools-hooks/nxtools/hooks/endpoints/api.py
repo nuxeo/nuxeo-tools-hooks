@@ -3,7 +3,10 @@ import json
 from flask.blueprints import Blueprint
 from nxtools import ServiceContainer, services
 from nxtools.hooks.endpoints import AbstractEndpoint
-from nxtools.hooks.entities.nuxeo_qa import StoredPullRequest
+from nxtools.hooks.entities.api_entities import ViewObjectWrapper
+from nxtools.hooks.entities.db_entities import StoredPullRequest
+from nxtools.hooks.services.github_service import GithubService
+from nxtools.hooks.services.json_encoders import APIPullRequestJSONEncoder
 
 
 @ServiceContainer.service
@@ -23,11 +26,15 @@ class ApiEndpoint(AbstractEndpoint):
     @staticmethod
     @__blueprint.route('/pull_requests',)
     def list_pull_requests():
-        return json.dumps([{
-                               "branch": raw_pr.branch,
-                               "repository": raw_pr.repository,
-                               "head_commit": raw_pr.head_commit
-                           } for raw_pr in StoredPullRequest.objects()])
+        github = services.get(GithubService)  # type: GithubService
+        pullrequests = []
+
+        for pr in StoredPullRequest.objects():
+            organization = github.get_organization(pr.organization)
+            repository = organization.get_repo(pr.repository)
+            pullrequests.append(ViewObjectWrapper(repository.get_pull(pr.pull_number), pr))
+
+        return json.dumps(pullrequests, cls=APIPullRequestJSONEncoder)
 
     def get_cors_config(self):
         return {k: v for k, v in self.config.items(self.config_section, {

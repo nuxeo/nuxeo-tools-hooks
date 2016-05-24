@@ -1,7 +1,19 @@
 version: '2'
 
+volumes:
+  data:
+
 services:
+  mongo:
+    image: mongo:latest
+    volumes:
+      - data:/data
   api:
     build: ./docker
     volumes:
       - ./dist:/opt/dist
+      - data:/opt/data
+    links:
+      - mongo
+    environment:
+      - NXTOOLS_HOOKS_CONNECTION_URL=mongodb://mongo/nxtools-hooks

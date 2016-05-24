@@ -1,11 +1,20 @@
 from ConfigParser import SafeConfigParser
 
+from types import ClassType
+
 import os
 
 
 class Config(object):
 
     ENV_PREFIX = "NXTOOLS_HOOKS_"
+
+    @staticmethod
+    def get_section(service):
+        if isinstance(service, type) or isinstance(service, ClassType):
+            return service.__name__
+        else:
+            return type(service).__name__
 
     def __init__(self, config_file):
         self._config = SafeConfigParser()

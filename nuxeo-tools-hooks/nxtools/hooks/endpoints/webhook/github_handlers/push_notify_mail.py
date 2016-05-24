@@ -8,6 +8,7 @@ from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandle
 from nxtools.hooks.endpoints.webhook.github_hook import InvalidPayloadException, GithubHook
 from nxtools.hooks.entities.github_entities import PushEvent
 from nxtools.hooks.entities.mail import Email
+from nxtools.hooks.services.github_service import GithubService
 from nxtools.hooks.services.mail import EmailService
 from unidecode import unidecode
 
@@ -170,7 +171,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
             jira_tickets.append(match.group(1).upper())
 
         try:
-            diff = services.get(GithubHook).get_organization(event.organization.login).get_repo(event.repository.name).\
+            diff = services.get(GithubService).get_organization(event.organization.login).get_repo(event.repository.name).\
                 get_commit_diff(commit.id)
         except Exception as e:
             diff = "Could not read diff - see %s.diff for raw diff" % commit.url

@@ -1,7 +1,7 @@
 from nxtools import ServiceContainer
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
 from nxtools.hooks.entities.github_entities import PullRequestEvent
-from nxtools.hooks.entities.nuxeo_qa import StoredPullRequest
+from nxtools.hooks.entities.db_entities import StoredPullRequest
 
 
 @ServiceContainer.service
@@ -17,6 +17,7 @@ class GithubStorePullRequestHandler(AbstractGithubHandler):
 
         stored_pr = StoredPullRequest(
             branch=event.pull_request.head.ref,
+            organization=event.organization.login,
             repository=event.repository.name,
             head_commit=event.pull_request.head.sha,
             pull_number=event.number

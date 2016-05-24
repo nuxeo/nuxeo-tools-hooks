@@ -13,6 +13,7 @@ from nxtools.hooks.endpoints.webhook import AbstractWebHook, github_handlers
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
 from nxtools.hooks.entities.github_entities import OrganizationWrapper
 from nxtools.hooks.services.config import Config
+from nxtools.hooks.services.github_service import NoSuchOrganizationException, GithubService
 
 
 class UnknownEventException(Exception):
@@ -27,11 +28,6 @@ class InvalidPayloadException(Exception):
         super(InvalidPayloadException, self).__init__()
 
 
-class NoSuchOrganizationException(Exception):
-    def __init__(self, organization):
-        super(NoSuchOrganizationException, self).__init__("Unknown organization '%s'" % organization)
-
-
 @ServiceContainer.service
 class GithubHook(AbstractWebHook):
 
@@ -42,10 +38,7 @@ class GithubHook(AbstractWebHook):
     """:type : dict[str, list[AbstractGithubHandler]]"""
 
     def __init__(self):
-        self._organizations = {}
-
-        # TODO: https://github.com/organizations/nuxeo-sandbox/settings/applications
-        self.github = Github("")
+        self.github = services.get(GithubService)
 
         loaded = [key for key, value in sys.modules.items()
                   if key.startswith(github_handlers.__name__) and isinstance(value, types.ModuleType)]
