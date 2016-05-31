@@ -20,17 +20,23 @@ class Config(object):
         self._config = SafeConfigParser()
         self._config.read(config_file)
 
+    def get_env_key_name(self, key, section=None):
+        key = key.upper()
+        if section and section != "general":
+            key = section.replace("Service", "_").upper() + key
+        return Config.ENV_PREFIX + key
+
     def get(self, section, key, default=None):
         config_value = default
         if self._config.has_option(section, key):
             config_value = self._config.get(section, key)
-        return os.getenv(Config.ENV_PREFIX + key.upper(), config_value)
+        return os.getenv(self.get_env_key_name(key, section), config_value)
 
     def items(self, section, defaults=None):
         items = defaults or {}
         if self._config.has_section(section):
             items.update({k: v for k, v in self._config.items(section)})
-        items.update({k: os.getenv(Config.ENV_PREFIX + k.upper(), v) for k, v in items.iteritems()})
+        items.update({k: os.getenv(self.get_env_key_name(k, section), v) for k, v in items.iteritems()})
         return items
 
     # From ConfigParser.py

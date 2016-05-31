@@ -1,6 +1,8 @@
+from github.CommitStatus import CommitStatus as BaseCommitStatus
 from github.GithubObject import NotSet, NonCompletableGithubObject
 from github.NamedUser import NamedUser
 from github.Organization import Organization
+from github.PaginatedList import PaginatedList
 from github.PullRequest import PullRequest
 from github.Repository import Repository
 
@@ -311,41 +313,72 @@ class Author(User):
             self._username = self._makeStringAttribute(attributes["username"])
 
 
-class RepositoryWrapper(Repository):
-
-    GITHUB_DIFF_ACCEPT_HEADER = {"Accept": "application/vnd.github.diff"}
-
-    def __init__(self, repository):
-        self.__dict__["_wrapped"] = repository
-        self._pgm = "test"
+class GithubEntityWrapper(object):
+    def __init__(self, wrappee):
+        self.__dict__["_wrappee"] = wrappee
 
     def __getattr__(self, name):
-        return getattr(self._wrapped, name)
+        return getattr(self._wrappee, name)
 
     def __setattr__(self, name, value):
-        setattr(self._wrapped, name, value)
-
-    def get_commit_diff(self, sha):
-        assert isinstance(sha, (str, unicode)), sha
-
-        return self._requester.requestJson("GET", self._wrapped.url + "/commit/" + sha, None,
-                                           RepositoryWrapper.GITHUB_DIFF_ACCEPT_HEADER, None)
+        setattr(self._wrappee, name, value)
 
 
-class OrganizationWrapper(Organization):
-
-    def __init__(self, organization):
-        self.__dict__["_wrapped"] = organization
-
-    def __getattr__(self, name):
-        return getattr(self._wrapped, name)
-
-    def __setattr__(self, name, value):
-        setattr(self._wrapped, name, value)
+class OrganizationWrapper(GithubEntityWrapper):
 
     def get_repo(self, name):
         """
         :rtype: nxtools.hooks.entities.github_entities.RepositoryWrapper
         """
         assert isinstance(name, (str, unicode)), name
-        return RepositoryWrapper(self._wrapped.get_repo(name))
+        return RepositoryWrapper(self._wrappee.get_repo(name))
+
+
+class RepositoryWrapper(GithubEntityWrapper):
+
+    GITHUB_DIFF_ACCEPT_HEADER = {"Accept": "application/vnd.github.diff"}
+
+    def get_commit_diff(self, sha):
+        assert isinstance(sha, (str, unicode)), sha
+
+        return self._requester.requestJson("GET", self._wrappee.url + "/commit/" + sha, None,
+                                           RepositoryWrapper.GITHUB_DIFF_ACCEPT_HEADER, None)
+
+    def get_commit(self, sha):
+        assert isinstance(sha, (str, unicode)), sha
+
+        return CommitWrapper(self._wrappee.get_commit(sha))
+
+
+class CommitWrapper(GithubEntityWrapper):
+
+    def get_statuses(self):
+        """
+        :calls: `GET /repos/:owner/:repo/commits/:ref/statuses <http://developer.github.com/v3/repos/statuses>`_
+        :rtype: github.PaginatedList.PaginatedList
+        """
+        return PaginatedList(
+            CommitStatus,
+            self._requester,
+            self.url + "/statuses",
+            None
+        )
+
+
+class CommitStatus(BaseCommitStatus):
+
+    def __init__(self, requester, headers, attributes, completed):
+        super(CommitStatus, self).__init__(requester, headers, attributes, completed)
+
+    @property
+    def context(self):
+        return self._context.value
+
+    def _initAttributes(self):
+        self._context = NotSet
+        super(CommitStatus, self)._initAttributes()
+
+    def _useAttributes(self, attributes):
+        if "context" in attributes:
+            self._context = self._makeStringAttribute(attributes["context"])
+        super(CommitStatus, self)._useAttributes(attributes)

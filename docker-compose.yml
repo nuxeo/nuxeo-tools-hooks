@@ -16,4 +16,4 @@ services:
     links:
       - mongo
     environment:
-      - NXTOOLS_HOOKS_CONNECTION_URL=mongodb://mongo/nxtools-hooks
+      - NXTOOLS_HOOKS_DATABASE_CONNECTION_URL=mongodb://mongo/nxtools-hooks

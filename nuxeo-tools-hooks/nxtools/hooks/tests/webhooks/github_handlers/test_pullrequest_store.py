@@ -1,7 +1,7 @@
 from nxtools import services
 from nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_store import GithubStorePullRequestHandler
 from nxtools.hooks.entities.github_entities import PullRequestEvent
-from nxtools.hooks.entities.nuxeo_qa import StoredPullRequest
+from nxtools.hooks.entities.db_entities import StoredPullRequest
 from nxtools.hooks.services.database import DatabaseService
 from nxtools.hooks.tests.webhooks.github_handlers import GithubHookHandlerTest
 

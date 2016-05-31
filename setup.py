@@ -24,6 +24,7 @@ setup(
         'flask-cors',
         'mock',
         'PyGithub',
+        'jira',
         'Jinja2',
         'Unidecode',
         'mongoengine',
