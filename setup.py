@@ -22,6 +22,9 @@ setup(
     install_requires=[
         'flask',
         'flask-cors',
+        'requests_oauthlib',
+        'PyJWT',
+        'cryptography',
         'mock',
         'PyGithub',
         'jira',

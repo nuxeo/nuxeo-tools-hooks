@@ -8,6 +8,7 @@ from flask.globals import request
 from nxtools import services, ServiceContainer
 from nxtools.hooks.endpoints import AbstractEndpoint
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
+from nxtools.hooks.services import BootableService
 
 
 class AbstractWebHook(object):
@@ -23,9 +24,13 @@ class NoSuchHookException(Exception):
 
 
 @ServiceContainer.service
-class WebHookEndpoint(AbstractEndpoint):
+class WebHookEndpoint(AbstractEndpoint, BootableService):
 
     __blueprint = Blueprint('webhook', __name__)
+
+    def boot(self, app):
+        """ :type app: nxtools.hooks.app.ToolsHooksApp """
+        app.flask.register_blueprint(WebHookEndpoint.blueprint(), url_prefix="/hook")
 
     @staticmethod
     def blueprint():

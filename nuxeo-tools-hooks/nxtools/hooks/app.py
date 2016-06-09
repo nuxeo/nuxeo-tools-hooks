@@ -4,7 +4,6 @@ import logging
 import os
 
 from flask.app import Flask
-from flask.ext.cors.extension import CORS
 from nxtools import services
 from nxtools.hooks import DEFAULTSECT
 from nxtools.hooks.endpoints.api import ApiEndpoint
@@ -16,12 +15,19 @@ from nxtools.hooks.services.database import DatabaseService
 class ToolsHooksApp(object):
 
     def __init__(self):
+        self.__flask = None
+
         config_file = os.getenv(Config.ENV_PREFIX + "CONF", os.getcwd() + "/conf/nuxeo-tools-hooks.ini")
         services.add(Config(config_file))
 
     @property
     def config(self):
         return services.get(Config)
+
+    @property
+    def flask(self):
+        """ :rtype: flask.app.Flask"""
+        return self.__flask
 
     def setup(self):
         log_file = self.config.get(DEFAULTSECT, "log_file")
@@ -32,15 +38,13 @@ class ToolsHooksApp(object):
             filename=log_file,
             level=logging._levelNames[self.config.get(DEFAULTSECT, "log_level", "INFO").upper()])
 
-        flask = Flask(__name__)
-        services.get(DatabaseService).connect()
+        self.__flask = Flask(__name__)
 
-        flask.register_blueprint(WebHookEndpoint.blueprint(), url_prefix="/hook")
+        services.get(DatabaseService).boot(self)
+        services.get(WebHookEndpoint).boot(self)
+        services.get(ApiEndpoint).boot(self)
 
-        CORS(ApiEndpoint.blueprint(), **services.get(ApiEndpoint).get_cors_config())
-        flask.register_blueprint(ApiEndpoint.blueprint(), url_prefix="/api")
-
-        return flask
+        return self.__flask
 
     def run(self):
         app = self.setup()
