@@ -1,6 +1,6 @@
 FROM ubuntu:latest
 
-RUN apt-get update && apt-get install -y python python-pip apache2 libapache2-mod-wsgi
+RUN apt-get update && apt-get install -y python-pip apache2 libapache2-mod-wsgi libffi-dev libssl-dev
 
 RUN a2dissite 000-default
 RUN ln -nsf /proc/self/fd/1 /var/log/apache2/access.log

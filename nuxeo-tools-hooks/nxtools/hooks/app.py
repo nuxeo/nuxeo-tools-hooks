@@ -11,6 +11,8 @@ from nxtools.hooks.endpoints.webhook import WebHookEndpoint
 from nxtools.hooks.services.config import Config
 from nxtools.hooks.services.database import DatabaseService
 
+log = logging.getLogger(__name__)
+
 
 class ToolsHooksApp(object):
 
@@ -18,6 +20,9 @@ class ToolsHooksApp(object):
         self.__flask = None
 
         config_file = os.getenv(Config.ENV_PREFIX + "CONF", os.getcwd() + "/conf/nuxeo-tools-hooks.ini")
+
+        print ' * Captain Hooks config file: ' + config_file
+
         services.add(Config(config_file))
 
     @property
@@ -37,6 +42,9 @@ class ToolsHooksApp(object):
         logging.basicConfig(
             filename=log_file,
             level=logging._levelNames[self.config.get(DEFAULTSECT, "log_level", "INFO").upper()])
+
+        log.info(' * Starting Captain Hooks.')
+        log.debug(' * Debug logs active.')
 
         self.__flask = Flask(__name__)
 

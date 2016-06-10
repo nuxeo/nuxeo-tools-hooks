@@ -35,8 +35,10 @@ class OAuthService(object):
         @wraps(fn)
         def decorated(*args, **kwargs):
             if services.get(OAuthService).authenticated:
+                log.debug(' * Authorized request to ' + request.url)
                 return fn(*args, **kwargs)
             else:
+                log.warn(' * Unauthorized request to ' + request.url)
                 return 'Unauthorized', 401
         return decorated
 

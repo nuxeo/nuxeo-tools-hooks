@@ -11,9 +11,14 @@ services:
   api:
     build: ./docker
     volumes:
+      - ./docker/entrypoint.sh:/entrypoint.sh
       - ./dist:/opt/dist
+      - ./conf:/opt/conf
       - data:/opt/data
     links:
       - mongo
+    ports:
+      - 8888:80
     environment:
+      - NXTOOLS_HOOKS_CONF=/opt/conf/nuxeo-tools-hooks.ini
       - NXTOOLS_HOOKS_DATABASE_CONNECTION_URL=mongodb://mongo/nxtools-hooks
