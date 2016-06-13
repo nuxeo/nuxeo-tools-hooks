@@ -1,11 +1,9 @@
-import unittest
-
-from mongoengine.document import Document
 from nxtools import services
 from nxtools.hooks.services.database import DatabaseService
+from nxtools.hooks.tests import HooksTestCase
 
 
-class ApiTest(unittest.TestCase):
+class ApiTest(HooksTestCase):
 
     def setUp(self):
         super(ApiTest, self).setUp()

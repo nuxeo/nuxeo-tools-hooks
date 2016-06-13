@@ -19,7 +19,6 @@ class ServiceContainer(object):
             return [raw_value for raw_type, raw_name, raw_value in self.list(clazz)][0]
 
     def list(self, clazz):
-
         self.__values.extend([(raw_type, raw_name, raw_value()) for raw_type, raw_name, raw_value in self.__raw
                               if issubclass(raw_type, clazz) and
                               (raw_type, raw_name) not in [(t, n) for t, n, v in self.__values]])
@@ -27,15 +26,32 @@ class ServiceContainer(object):
         return [(raw_type, raw_name, raw_value) for raw_type, raw_name, raw_value in self.__values
                 if issubclass(raw_type, clazz)]
 
-    def add(self, service, name=None):
-        if isinstance(service, type) or isinstance(service, ClassType):
-            name = name if name else service.__module__ + "." + service.__name__
-            if name not in [n for t, n, v in self.list(service)]:
-                self.__raw.append((service, name, lambda: service()))
+    def add(self, service, name=None, replace=False):
+        is_type = isinstance(service, type) or isinstance(service, ClassType)
+        found = False
+
+        if is_type:
+            raw_name = name if name else service.__module__ + "." + service.__name__
+            raw_type = service
+            service_collection = self.__raw
         else:
-            name = name if name else service.__module__ + "." + type(service).__name__
-            if name not in [n for t, n, v in self.list(type(service))]:
-                self.__raw.append((type(service), name, lambda: service))
+            raw_name = name if name else service.__module__ + "." + type(service).__name__
+            raw_type = type(service)
+            service_collection = self.__values
+
+        for index, existing_service in enumerate(service_collection):
+            existing_type, existing_name, existing_value = existing_service
+            if raw_name == existing_name:
+                if replace:
+                    del service_collection[index]
+                else:
+                    found = True
+
+        if not found:
+            if is_type:
+                self.__raw.append((raw_type, raw_name, lambda: service()))
+            else:
+                self.__values.append((raw_type, raw_name, service))
 
     def reload(self):
         del self.__values[:]

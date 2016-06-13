@@ -4,10 +4,10 @@ from mock.mock import patch, PropertyMock
 from nxtools import services
 from nxtools.hooks.endpoints.webhook.github_hook import GithubHook
 from nxtools.hooks.services.config import Config
-from nxtools.hooks.tests.webhooks import HooksTestCase
+from nxtools.hooks.tests.webhooks import WebHooksTestCase
 
 
-class GithubHookHandlerTest(HooksTestCase):
+class GithubHookHandlerTest(WebHooksTestCase):
 
     class payload_file(object):
 
@@ -32,8 +32,8 @@ class GithubHookHandlerTest(HooksTestCase):
     def setUp(self):
         super(GithubHookHandlerTest, self).setUp()
 
+        services.add(Config('nxtools/hooks/tests/resources/github_handlers/config.ini'), replace=True)
         self.hook = services.get(GithubHook)
-        services.add(Config("nxtools/hooks/tests/resources/github_handlers/config.ini"))
 
         self.maxDiff = None
 

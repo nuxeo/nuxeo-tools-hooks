@@ -5,10 +5,10 @@ from mock.mock import patch
 from nxtools import services
 from nxtools.hooks.endpoints.webhook import WebHookEndpoint, NoSuchHookException
 from nxtools.hooks.endpoints.webhook.github_hook import GithubHook, UnknownEventException, InvalidPayloadException
-from nxtools.hooks.tests.webhooks import HooksTestCase
+from nxtools.hooks.tests.webhooks import WebHooksTestCase
 
 
-class WebhooksTest(HooksTestCase):
+class WebhooksTest(WebHooksTestCase):
 
     def setUp(self):
         super(WebhooksTest, self).setUp()

@@ -1,12 +1,12 @@
-import unittest
-
 from nxtools import services
-from nxtools.hooks.tests import TestMocks
+from nxtools.hooks.services.config import Config
+from nxtools.hooks.tests import TestMocks, HooksTestCase
 
 
-class HooksTestCase(unittest.TestCase):
+class WebHooksTestCase(HooksTestCase):
 
     def setUp(self):
+        services.add(Config('nxtools/hooks/tests/resources/config.ini'))
         self.mocks = TestMocks()
 
     def tearDown(self):
