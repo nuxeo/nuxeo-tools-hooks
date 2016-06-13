@@ -12,6 +12,11 @@ class HooksTestCase(unittest.TestCase):
 
         services.add(Config('nxtools/hooks/tests/resources/config.ini'))
 
+    def tearDown(self):
+        super(HooksTestCase, self).tearDown()
+
+        services.reload()
+
 
 class TestMocks(object):
 

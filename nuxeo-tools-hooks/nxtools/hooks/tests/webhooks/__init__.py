@@ -8,6 +8,3 @@ class WebHooksTestCase(HooksTestCase):
     def setUp(self):
         services.add(Config('nxtools/hooks/tests/resources/config.ini'))
         self.mocks = TestMocks()
-
-    def tearDown(self):
-        services.reload()

@@ -10,6 +10,7 @@ from nxtools.hooks.endpoints.api import ApiEndpoint
 from nxtools.hooks.endpoints.webhook import WebHookEndpoint
 from nxtools.hooks.services.config import Config
 from nxtools.hooks.services.database import DatabaseService
+from werkzeug.serving import run_simple
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +35,11 @@ class ToolsHooksApp(object):
         """ :rtype: flask.app.Flask"""
         return self.__flask
 
-    def setup(self):
+    def setup(self, request_environ=None):
+        if request_environ is not None:
+            self.config.set_request_environ({k: v for k, v in request_environ.iteritems()
+                                             if k.startswith(Config.ENV_PREFIX)})
+
         log_file = self.config.get(DEFAULTSECT, "log_file")
         if log_file and not os.path.exists(os.path.dirname(log_file)):
             os.makedirs(os.path.dirname(log_file))
@@ -55,15 +60,19 @@ class ToolsHooksApp(object):
         return self.__flask
 
     def run(self):
-        app = self.setup()
+        # app = self.setup()
+        debug = self.config.getboolean(DEFAULTSECT, "debug", False)
 
-        app.run(
-            host=self.config.get(DEFAULTSECT, "listen_address", "0.0.0.0"),
+        run_simple(
+            hostname=self.config.get(DEFAULTSECT, "listen_address", "0.0.0.0"),
             port=self.config.getint(DEFAULTSECT, "port", 8888),
-            debug=self.config.getboolean(DEFAULTSECT, "debug", False))
+            application=self,
+            use_reloader=debug,
+            use_debugger=debug
+        )
 
     def __call__(self, environ, start_response):
-        return self.setup().__call__(environ, start_response)
+        return self.setup(environ).__call__(environ, start_response)
 
 application = ToolsHooksApp()
 

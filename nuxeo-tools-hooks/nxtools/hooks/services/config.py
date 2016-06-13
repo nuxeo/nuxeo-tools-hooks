@@ -20,6 +20,11 @@ class Config(object):
         self._config = SafeConfigParser()
         self._config.read(config_file)
 
+        self.request_env = {}
+
+    def set_request_environ(self, environ):
+        self.request_env = environ
+
     def get_env_key_name(self, key, section=None):
         key = key.upper()
         if section and section != "general":
@@ -28,9 +33,12 @@ class Config(object):
 
     def get(self, section, key, default=None):
         config_value = default
+        env_key = self.get_env_key_name(key, section)
+
         if self._config.has_option(section, key):
             config_value = self._config.get(section, key)
-        return os.getenv(self.get_env_key_name(key, section), config_value)
+
+        return self.request_env.get(env_key, os.getenv(env_key, config_value))
 
     def items(self, section, defaults=None):
         items = defaults or {}
