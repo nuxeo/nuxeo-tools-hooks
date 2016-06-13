@@ -53,7 +53,7 @@ class WebHookEndpoint(AbstractEndpoint, BootableService):
                   if key.startswith(__name__) and isinstance(value, types.ModuleType)]
         log.debug(' * Already loaded modules: ' + ', '.join(loaded))
 
-        for loader, module_name, is_pkg in pkgutil.iter_modules(__path__, __name__ + "."):
+        for loader, module_name, _ in pkgutil.iter_modules(__path__, __name__ + "."):
             if module_name.endswith("_hook") and module_name not in loaded:
                 log.debug(' * Loading module: ' + module_name)
                 loader.find_module(module_name).load_module(module_name)
