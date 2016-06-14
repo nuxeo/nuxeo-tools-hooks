@@ -24,12 +24,6 @@ class OAuthService(object):
 
     CONFIG_SECTION = 'OAuthService'
 
-    def get_cors_config(self):
-        return {k.replace("cors_", ""): v for k, v in services.get(Config).items(OAuthService.CONFIG_SECTION, {
-            "cors_origins": "*",
-            "cors_supports_credentials": True
-        }).iteritems() if k.startswith("cors_")}
-
     @staticmethod
     def secured(fn):
         @wraps(fn)

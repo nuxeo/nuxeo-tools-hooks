@@ -1,7 +1,7 @@
 import json
 
 from flask.blueprints import Blueprint
-from flask.ext.cors.extension import CORS
+from flask_cors.extension import CORS
 from nxtools import ServiceContainer, services
 from nxtools.hooks.endpoints import AbstractEndpoint
 from nxtools.hooks.entities.db_entities import StoredPullRequest
