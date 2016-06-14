@@ -4,6 +4,7 @@ import logging
 import os
 
 from flask.app import Flask
+from logging import FileHandler
 from nxtools import services
 from nxtools.hooks import DEFAULTSECT
 from nxtools.hooks.endpoints.api import ApiEndpoint
@@ -12,6 +13,8 @@ from nxtools.hooks.services.config import Config
 from nxtools.hooks.services.database import DatabaseService
 from werkzeug.serving import run_simple
 
+
+logging.basicConfig(level='INFO')
 log = logging.getLogger(__name__)
 
 
@@ -20,19 +23,13 @@ class ToolsHooksApp(object):
     def __init__(self):
         self.__flask = None
 
-        config_file = os.getenv(Config.ENV_PREFIX + "CONF", os.getcwd() + "/conf/nuxeo-tools-hooks.ini")
-
-        print ' * Captain Hooks config file: ' + config_file
-
-        services.add(Config(config_file))
-
     @property
     def config(self):
         return services.get(Config)
 
     @property
     def flask(self):
-        """ :rtype: flask.app.Flask"""
+        """ :rtype: flask.app.Flaenvironsk"""
         return self.__flask
 
     def setup(self, request_environ=None):
@@ -41,15 +38,29 @@ class ToolsHooksApp(object):
                                              if k.startswith(Config.ENV_PREFIX)})
 
         log_file = self.config.get(DEFAULTSECT, "log_file")
-        if log_file and not os.path.exists(os.path.dirname(log_file)):
-            os.makedirs(os.path.dirname(log_file))
 
-        logging.basicConfig(
-            filename=log_file,
-            level=logging._levelNames[self.config.get(DEFAULTSECT, "log_level", "INFO").upper()])
+        if log_file:
+            if not os.path.exists(os.path.dirname(log_file)):
+                os.makedirs(os.path.dirname(log_file))
 
-        log.info(' * Starting Captain Hooks.')
-        log.debug(' * Debug logs active.')
+            log.info(logging.root.handlers)
+            del logging.root.handlers[:]
+            logging.root.addHandler(FileHandler(log_file, 'a'))
+
+        if self.config.get(DEFAULTSECT, "debug", False):
+            log_level = logging.DEBUG
+        else:
+            log_level = self.config.get(DEFAULTSECT, 'log_level', 'INFO').upper()
+
+        logging.root.setLevel(log_level)
+
+        if self.config.get(DEFAULTSECT, "debug", False):
+            keys = request_environ.keys()
+            keys.sort()
+            for key in keys:
+                log.debug('%s: %s', key, repr(request_environ[key]))
+
+        log.info('Starting Captain Hooks.')
 
         self.__flask = Flask(__name__)
 
@@ -60,7 +71,6 @@ class ToolsHooksApp(object):
         return self.__flask
 
     def run(self):
-        # app = self.setup()
         debug = self.config.getboolean(DEFAULTSECT, "debug", False)
 
         run_simple(

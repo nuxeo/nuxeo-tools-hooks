@@ -1,4 +1,5 @@
 import json
+import os
 
 from mock.mock import patch, PropertyMock
 from nxtools import services
@@ -32,7 +33,10 @@ class GithubHookHandlerTest(WebHooksTestCase):
     def setUp(self):
         super(GithubHookHandlerTest, self).setUp()
 
-        services.add(Config('nxtools/hooks/tests/resources/github_handlers/config.ini'), replace=True)
+        os.environ[Config.ENV_PREFIX + Config.CONFIG_FILE_KEY] = \
+            'nxtools/hooks/tests/resources/github_handlers/config.ini'
+        services.get(Config).reload()
+
         self.hook = services.get(GithubHook)
 
         self.maxDiff = None
