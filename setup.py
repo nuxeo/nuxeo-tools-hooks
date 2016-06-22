@@ -1,5 +1,16 @@
 import codecs
 from setuptools import setup, find_packages
+from pathlib2 import Path
+
+
+
+def find_files(paths):
+    result = []
+    basePath = Path('nuxeo-tools-hooks/nxtools/hooks')
+    for path in [basePath.glob(path) for path in paths]:
+        result += path
+
+    return [str(path.relative_to(basePath)) for path in result if not path.relative_to(basePath).match('tests/**/*')]
 
 setup(
     name='nuxeo-tools-hooks',
@@ -18,7 +29,7 @@ setup(
     keywords='nuxeo',
     packages=find_packages("nuxeo-tools-hooks"),
     package_dir={"nxtools": "nuxeo-tools-hooks/nxtools"},
-    package_data={"nxtools.hooks": ["doc/*"]},
+    package_data={"nxtools.hooks": find_files(["doc/*", "**/resources/*"])},
     install_requires=[
         'flask',
         'flask-cors',
@@ -30,6 +41,7 @@ setup(
         'jira',
         'Jinja2',
         'Unidecode',
+        'pathlib2',
         'mongoengine',
         'mongomock'
     ]

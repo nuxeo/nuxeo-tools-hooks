@@ -1,0 +1,14 @@
+flask
+flask-cors
+requests_oauthlib
+PyJWT
+cryptography
+mock
+PyGithub
+jira
+Jinja2
+Unidecode
+pathlib2
+mongoengine
+mongomock
+
