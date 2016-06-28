@@ -4,6 +4,7 @@ import logging
 
 from github.GithubException import UnknownObjectException, GithubException
 from github.MainClass import Github
+from jira.exceptions import JIRAError
 from mongoengine.errors import OperationError
 from nxtools import ServiceContainer, services
 from nxtools.hooks.entities.db_entities import StoredPullRequest
@@ -53,7 +54,7 @@ class GithubService(AbstractService):
                     repository = organization.get_repo(stored_pr.repository)
                     pullrequest = repository.get_pull(stored_pr.pull_number)
                     head_commit = repository.get_commit(pullrequest.head.sha)
-                    jira_key = jira.get_issue_id_from_branch(pullrequest.head.ref)
+                    jira_key = jira.get_issue_id_from_branch(stored_pr.branch)
                     jira_issue = jira.get_issue(jira_key)
                     pullrequests.append({
                         'additions': pullrequest.additions,
@@ -108,7 +109,7 @@ class GithubService(AbstractService):
                         'url': pullrequest.url,
                         'user': pullrequest.user.login
                     })
-                except (HTTPException, GithubException), e:
+                except (JIRAError, GithubException, HTTPException), e:
                     log.warn('list_pull_requests: Failed to fetch data of %s/%s/pull/%s: %s',
                              stored_pr.organization, stored_pr.repository, stored_pr.pull_number, e)
         except OperationError, e:
