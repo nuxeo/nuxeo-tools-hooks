@@ -1,14 +1,16 @@
 import json
 
+import logging
+
 from flask.blueprints import Blueprint
 from flask_cors.extension import CORS
 from nxtools import ServiceContainer, services
 from nxtools.hooks.endpoints import AbstractEndpoint
-from nxtools.hooks.entities.db_entities import StoredPullRequest
 from nxtools.hooks.services import BootableService
 from nxtools.hooks.services.github_service import GithubService
-from nxtools.hooks.services.jira_service import JiraService
 from nxtools.hooks.services.oauth_service import OAuthService
+
+log = logging.getLogger(__name__)
 
 
 @ServiceContainer.service
@@ -30,92 +32,43 @@ class ApiEndpoint(AbstractEndpoint, BootableService):
     @__blueprint.route('/services')
     @OAuthService.secured
     def services():
-        return json.dumps([t.__module__ + "." + t.__name__ for t, n, v in services.list(object)])
+        try:
+            return json.dumps([t.__module__ + "." + t.__name__ for t, n, v in services.list(object)])
+        except Exception, e:
+            log.warn('services: Could not list services: %s', e)
+            return 'KO', 500
 
     @staticmethod
     @__blueprint.route('/validate/<code>')
     def validate(code):
-        return services.get(OAuthService).validate(code)
+        try:
+            return services.get(OAuthService).validate(code)
+        except Exception, e:
+            log.warn('validate: Could not validate OAuth code: %s', e)
+            return 'KO', 500
 
     @staticmethod
     @__blueprint.route('/me')
     @OAuthService.secured
     def me():
-        if services.get(OAuthService).authenticated:
-            return 'OK', 200
-        else:
-            return 'KO', 401
+        try:
+            if services.get(OAuthService).authenticated:
+                return 'OK'
+            else:
+                return 'KO', 401
+        except Exception, e:
+            log.warn('me: Could not check for authentication: %s', e)
+            return 'KO', 500
 
     @staticmethod
     @__blueprint.route('/pull_requests')
     @OAuthService.secured
     def list_pull_requests():
-        github = services.get(GithubService)  # type: GithubService
-        jira = services.get(JiraService)  # type: JiraService
-        pullrequests = []
-
-        for stored_pr in StoredPullRequest.objects():
-            organization = github.get_organization(stored_pr.organization)
-            repository = organization.get_repo(stored_pr.repository)
-            pullrequest = repository.get_pull(stored_pr.pull_number)
-            head_commit = repository.get_commit(pullrequest.head.sha)
-            jira_key = jira.get_issue_id_from_branch(pullrequest.head.ref)
-            jira_issue = jira.get_issue(jira_key)
-            pullrequests.append({
-                'additions': pullrequest.additions,
-                'assignee': pullrequest.assignee.login if pullrequest.assignee else None,
-                'base': pullrequest.base.ref,
-                'body': pullrequest.body,
-                'changed_files': pullrequest.changed_files,
-                'closed_at': pullrequest.closed_at.isoformat() if pullrequest.closed_at else None,
-                'comments': pullrequest.comments,
-                'comments_url': pullrequest.comments_url,
-                'commits': pullrequest.commits,
-                'commits_url': pullrequest.commits_url,
-                'created_at': pullrequest.created_at.isoformat(),
-                'deletions': pullrequest.deletions,
-                'diff_url': pullrequest.diff_url,
-                'head': pullrequest.head.ref,
-                'html_url': pullrequest.html_url,
-                'id': pullrequest.id,
-                'issue_url': pullrequest.issue_url,
-                'jira_key': jira_key,
-                'jira_summary': jira_issue.fields.summary,
-                'merge_commit_sha': pullrequest.merge_commit_sha,
-                'mergeable': pullrequest.mergeable,
-                'mergeable_state': pullrequest.mergeable_state,
-                'merged': pullrequest.merged,
-                'merged_at': pullrequest.merged_at.isoformat() if pullrequest.merged_at else None,
-                'merged_by': pullrequest.merged_by.login if pullrequest.merged_by else None,
-                'milestone': pullrequest.milestone.id if pullrequest.milestone else None,
-                'number': pullrequest.number,
-                'organization': organization.login,
-                'other_statuses': [{
-                   'state': status.state,
-                   'description': status.description,
-                   'target': status.target_url,
-                   'context': status.context
-                                   } for status in head_commit.get_statuses()
-                                   if not status.context.startswith("code-review/")],
-                'patch_url': pullrequest.patch_url,
-                'review_comment_url': pullrequest.review_comment_url,
-                'review_comments': pullrequest.review_comments,
-                'review_status': [{
-                    'state': status.state,
-                    'description': status.description,
-                    'target': status.target_url,
-                    'context': status.context
-                                  } for status in head_commit.get_statuses()
-                                  if status.context.startswith("code-review/")][0],
-                'repository': repository.name,
-                'state': pullrequest.state,
-                'title': pullrequest.title,
-                'updated_at': pullrequest.updated_at.isoformat() if pullrequest.updated_at else None,
-                'url': pullrequest.url,
-                'user': pullrequest.user.login
-            })
-
-        return json.dumps(pullrequests)
+        try:
+            return json.dumps(services.get(GithubService).list_pull_requests())
+        except Exception, e:
+            log.warn('list_pull_requests: Could not list pull requests: %s', e)
+            return 'KO', 500
 
     def get_cors_config(self):
         return {k.replace("cors_", ""): v for k, v in self.config.items(self.config_section, {
