@@ -13,6 +13,11 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
 
         services.get(DatabaseService).connect()
 
+    def tearDown(self):
+        super(GithubStorePullRequestHandlerTest, self).tearDown()
+
+        StoredPullRequest.drop_collection()
+
     @property
     def handler(self):
         """
