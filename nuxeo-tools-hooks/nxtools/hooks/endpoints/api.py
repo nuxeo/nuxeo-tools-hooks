@@ -8,6 +8,7 @@ from nxtools import ServiceContainer, services
 from nxtools.hooks.endpoints import AbstractEndpoint
 from nxtools.hooks.services import BootableService
 from nxtools.hooks.services.github_service import GithubService
+from nxtools.hooks.services.jwt_service import JwtService
 from nxtools.hooks.services.oauth_service import OAuthService
 
 log = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ class ApiEndpoint(AbstractEndpoint, BootableService):
 
     @staticmethod
     @__blueprint.route('/validate/<code>')
+    @JwtService.update_cookie
     def validate(code):
         try:
             return services.get(OAuthService).validate(code)
@@ -58,6 +60,17 @@ class ApiEndpoint(AbstractEndpoint, BootableService):
                 return 'KO', 401
         except Exception, e:
             log.warn('me: Could not check for authentication: %s', e)
+            return 'KO', 500
+
+    @staticmethod
+    @__blueprint.route('/pull_requests/sync', methods=['POST'])
+    @OAuthService.secured
+    def sync_pull_requests():
+        try:
+            services.get(GithubService).sync_pull_requests()
+            return 'OK'
+        except Exception, e:
+            log.warn('sync_pull_requests: Could not sync pull requests: %s', e)
             return 'KO', 500
 
     @staticmethod

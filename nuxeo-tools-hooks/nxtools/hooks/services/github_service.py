@@ -2,8 +2,13 @@ from httplib import HTTPException
 
 import logging
 
+import re
+
 from github.GithubException import UnknownObjectException, GithubException
 from github.MainClass import Github
+from github.Organization import Organization
+from github.PullRequest import PullRequest
+from github.Repository import Repository
 from jira.exceptions import JIRAError
 from mongoengine.errors import OperationError
 from nxtools import ServiceContainer, services
@@ -117,3 +122,29 @@ class GithubService(AbstractService):
             raise Exception(e)
 
         return pullrequests
+
+    def sync_pull_requests(self):
+
+        for organization_name in re.sub(r"\s+", "", self.config('sync_pullrequests_organizations', ''),
+                                        flags=re.UNICODE).split(','):
+            try:
+                organization = self.get_organization(organization_name)  # type: Organization
+                for repository in organization.get_repos():  # type: Repository
+                    try:
+                        for pull_request in repository.get_pulls():  # type: PullRequest
+                            stored_pr = StoredPullRequest(
+                                branch=pull_request.head.ref,
+                                organization=organization.login,
+                                repository=repository.name,
+                                head_commit=pull_request.head.sha,
+                                pull_number=pull_request.number
+                            )
+
+                            stored_pr.save()
+
+                    except (HTTPException, GithubException, OperationError), e:
+                        log.warn('sync_pull_requests: Failed to fetch pull requests of repository %s/%s: %s',
+                                 organization_name, repository.name, e)
+
+            except (HTTPException, GithubException, NoSuchOrganizationException), e:
+                log.warn('sync_pull_requests: Failed to fetch repositories of %s: %s', organization_name, e)
