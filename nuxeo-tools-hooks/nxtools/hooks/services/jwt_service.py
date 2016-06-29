@@ -61,7 +61,7 @@ class JwtService(AbstractService):
         return self
 
     @staticmethod
-    def update_cookie(fn):
+    def update_jwt(fn):
         @wraps(fn)
         def decorated(*args, **kwargs):
             @after_this_request

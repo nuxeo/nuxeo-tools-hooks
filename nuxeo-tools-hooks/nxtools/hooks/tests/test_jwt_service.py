@@ -45,7 +45,7 @@ class JwtServiceTest(HooksTestCase):
     def testUpdateJwt(self):
         self.mocks.jwt_encode.return_value = JwtServiceTest.ACCESS_TOKEN
         with self.app.test_request_context(), patch("jwt.encode", self.mocks.jwt_encode):
-            @JwtService.update_cookie
+            @JwtService.update_jwt
             def fake_controller():
                 return make_response()
 
