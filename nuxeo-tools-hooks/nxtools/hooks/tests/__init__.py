@@ -33,6 +33,7 @@ class HooksTestCase(unittest.TestCase):
         super(HooksTestCase, self).tearDown()
 
         services.reload()
+        self.mocks.clear()
 
 
 class TestMocks(object):
@@ -44,3 +45,6 @@ class TestMocks(object):
         if item not in self._items:
             self._items[item] = Mock()
         return self._items[item]
+
+    def clear(self):
+        self.__dict__["_items"] = {}

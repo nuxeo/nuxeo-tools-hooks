@@ -1,17 +1,11 @@
-import datetime
 import logging
 
 from functools import wraps
-
-import jwt
-
 from flask.blueprints import Blueprint
 from flask.globals import request
-from flask.helpers import make_response
-from flask.wrappers import Response
-from jwt.exceptions import DecodeError
 from nxtools import ServiceContainer, services
 from nxtools.hooks.services.config import Config
+from nxtools.hooks.services.jwt_service import JwtService
 from requests_oauthlib.oauth2_session import OAuth2Session
 
 log = logging.getLogger(__name__)
@@ -38,17 +32,7 @@ class OAuthService(object):
 
     @property
     def authenticated(self):
-        if 'access_token' in request.cookies:
-            try:
-                access_token = jwt.decode(
-                    request.cookies['access_token'],
-                    self.config('jwt_secret', 'secret'),
-                    audience='dashboard.qa.nuxeo.org',
-                    issuer='hooks.nuxeo.org')
-                return True
-            except DecodeError:
-                log.warn('Invalid JWT: %s', request.cookies['access_token'])
-        return False
+        return services.get(JwtService).has_jwt()
 
     def config(self, key, default=None):
         return services.get(Config).get(OAuthService.CONFIG_SECTION, key, default)
@@ -59,19 +43,5 @@ class OAuthService(object):
                                           client_secret=self.config('consumer_secret'),
                                           code=code)
 
-        response = make_response()  # type: Response
-        access_token = jwt.encode({
-            'sub': 'hooks-oauth',
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(self.config('jwt_expires', 3600)),
-            'nbf': datetime.datetime.utcnow(),
-            'iss': 'hooks.nuxeo.org',
-            'aud': 'dashboard.qa.nuxeo.org',
-            'iat': datetime.datetime.utcnow(),
-            'gat': github_token['access_token']  # Github Access Token
-        },
-            self.config('jwt_secret', 'secret'),
-            algorithm=self.config('jwt_algorithm', 'HS256'))
-        log.info('Generated new JWT: %s', access_token)
-        response.set_cookie('access_token', access_token, httponly=True)
-
-        return response
+        services.get(JwtService).set('gat', github_token['access_token'])  # Github Access Token
+        return 'OK'
