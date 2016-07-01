@@ -106,7 +106,7 @@ class GithubService(AbstractService):
                             'target': status.target_url,
                             'context': status.context
                                           } for status in head_commit.get_statuses()
-                                          if status.context.startswith("code-review/")][0],
+                                          if status.context.startswith("code-review/")][:1],
                         'repository': repository.name,
                         'state': pullrequest.state,
                         'title': pullrequest.title,
