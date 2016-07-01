@@ -131,6 +131,7 @@ class GithubService(AbstractService):
                 organization = self.get_organization(organization_name)  # type: Organization
                 for repository in organization.get_repos():  # type: Repository
                     try:
+                        log.info('Syncing pull requests of %s/%s', organization_name, repository.name)
                         for pull_request in repository.get_pulls():  # type: PullRequest
                             stored_pr = StoredPullRequest(
                                 branch=pull_request.head.ref,
