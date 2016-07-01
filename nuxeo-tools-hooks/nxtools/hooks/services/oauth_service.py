@@ -5,6 +5,7 @@ from flask.blueprints import Blueprint
 from flask.globals import request
 from nxtools import ServiceContainer, services
 from nxtools.hooks.services.config import Config
+from nxtools.hooks.services.csrf import CSRFService
 from nxtools.hooks.services.jwt_service import JwtService
 from requests_oauthlib.oauth2_session import OAuth2Session
 
@@ -44,4 +45,5 @@ class OAuthService(object):
                                           code=code)
 
         services.get(JwtService).set('gat', github_token['access_token'])  # Github Access Token
+        services.get(CSRFService).update()
         return 'OK'
