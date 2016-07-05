@@ -3,7 +3,6 @@ from setuptools import setup, find_packages
 from pathlib2 import Path
 
 
-
 def find_files(paths):
     result = []
     basePath = Path('nuxeo-tools-hooks/nxtools/hooks')
@@ -36,13 +35,12 @@ setup(
         'requests_oauthlib',
         'PyJWT',
         'cryptography',
-        'mock',
         'PyGithub',
         'jira',
         'Jinja2',
         'Unidecode',
-        'pathlib2',
         'mongoengine',
-        'mongomock'
+        'gevent',
+        'geventhttpclient'
     ]
 )
