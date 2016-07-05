@@ -1,7 +1,7 @@
-from nxtools import ServiceContainer
+from nxtools import ServiceContainer, services
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
 from nxtools.hooks.entities.github_entities import PullRequestEvent
-from nxtools.hooks.entities.db_entities import StoredPullRequest
+from nxtools.hooks.services.github_service import GithubService
 
 
 @ServiceContainer.service
@@ -14,15 +14,6 @@ class GithubStorePullRequestHandler(AbstractGithubHandler):
 
     def handle(self, payload_body):
         event = PullRequestEvent(None, None, payload_body, True)
-
-        stored_pr = StoredPullRequest(
-            branch=event.pull_request.head.ref,
-            organization=event.organization.login,
-            repository=event.repository.name,
-            head_commit=event.pull_request.head.sha,
-            pull_number=event.number
-        )
-
-        stored_pr.save()
+        services.get(GithubService).create_pullrequest(event.organization, event.repository, event.pull_request)
 
         return 200, GithubStorePullRequestHandler.MSG_OK

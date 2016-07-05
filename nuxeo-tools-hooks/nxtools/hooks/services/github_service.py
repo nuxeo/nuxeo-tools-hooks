@@ -1,14 +1,13 @@
 from httplib import HTTPException
 
 import logging
+from operator import itemgetter
 
 import re
 
 from github.GithubException import UnknownObjectException, GithubException
 from github.MainClass import Github
 from github.Organization import Organization
-from github.PullRequest import PullRequest
-from github.Repository import Repository
 from jira.exceptions import JIRAError
 from mongoengine.errors import OperationError
 from nxtools import ServiceContainer, services
@@ -47,81 +46,105 @@ class GithubService(AbstractService):
                 raise NoSuchOrganizationException(name)
         return self.__organizations[name]
 
-    def list_pull_requests(self):
+    def create_pullrequest(self, organization, repository, pull_request):
+
+        stored_pr = StoredPullRequest.objects(
+            organization=organization.login,
+            repository=repository.name,
+            pull_number=pull_request.number
+        ).first()
+
+        if stored_pr is None:
+            stored_pr = StoredPullRequest(
+                organization=organization.login,
+                repository=repository.name,
+                pull_number=pull_request.number,
+            )
+
+        stored_pr.branch = pull_request.head.ref
+        stored_pr.head_commit = pull_request.head.sha
+        stored_pr.created_at = pull_request.created_at
+        stored_pr.save()
+
+    def get_pullrequest(self, stored_pullrequest):
         github = services.get(GithubService)  # type: GithubService
         jira = services.get(JiraService)  # type: JiraService
-        pullrequests = []
 
         try:
-            for stored_pr in StoredPullRequest.objects():
-                try:
-                    organization = github.get_organization(stored_pr.organization)
-                    repository = organization.get_repo(stored_pr.repository)
-                    pullrequest = repository.get_pull(stored_pr.pull_number)
-                    head_commit = repository.get_commit(pullrequest.head.sha)
-                    jira_key = jira.get_issue_id_from_branch(stored_pr.branch)
-                    jira_issue = jira.get_issue(jira_key)
-                    pullrequests.append({
-                        'additions': pullrequest.additions,
-                        'assignee': pullrequest.assignee.login if pullrequest.assignee else None,
-                        'base': pullrequest.base.ref,
-                        'body': pullrequest.body,
-                        'changed_files': pullrequest.changed_files,
-                        'closed_at': pullrequest.closed_at.isoformat() if pullrequest.closed_at else None,
-                        'comments': pullrequest.comments,
-                        'comments_url': pullrequest.comments_url,
-                        'commits': pullrequest.commits,
-                        'commits_url': pullrequest.commits_url,
-                        'created_at': pullrequest.created_at.isoformat(),
-                        'deletions': pullrequest.deletions,
-                        'diff_url': pullrequest.diff_url,
-                        'head': pullrequest.head.ref,
-                        'html_url': pullrequest.html_url,
-                        'id': pullrequest.id,
-                        'issue_url': pullrequest.issue_url,
-                        'jira_key': jira_key,
-                        'jira_summary': jira_issue.fields.summary,
-                        'merge_commit_sha': pullrequest.merge_commit_sha,
-                        'mergeable': pullrequest.mergeable,
-                        'mergeable_state': pullrequest.mergeable_state,
-                        'merged': pullrequest.merged,
-                        'merged_at': pullrequest.merged_at.isoformat() if pullrequest.merged_at else None,
-                        'merged_by': pullrequest.merged_by.login if pullrequest.merged_by else None,
-                        'milestone': pullrequest.milestone.id if pullrequest.milestone else None,
-                        'number': pullrequest.number,
-                        'organization': organization.login,
-                        'other_statuses': [{
-                           'state': status.state,
-                           'description': status.description,
-                           'target': status.target_url,
-                           'context': status.context
-                                           } for status in head_commit.get_statuses()
-                                           if not status.context.startswith("code-review/")],
-                        'patch_url': pullrequest.patch_url,
-                        'review_comment_url': pullrequest.review_comment_url,
-                        'review_comments': pullrequest.review_comments,
-                        'review_status': [{
-                            'state': status.state,
-                            'description': status.description,
-                            'target': status.target_url,
-                            'context': status.context
-                                          } for status in head_commit.get_statuses()
-                                          if status.context.startswith("code-review/")][:1],
-                        'repository': repository.name,
-                        'state': pullrequest.state,
-                        'title': pullrequest.title,
-                        'updated_at': pullrequest.updated_at.isoformat() if pullrequest.updated_at else None,
-                        'url': pullrequest.url,
-                        'user': pullrequest.user.login
-                    })
-                except (JIRAError, GithubException, HTTPException), e:
-                    log.warn('list_pull_requests: Failed to fetch data of %s/%s/pull/%s: %s',
-                             stored_pr.organization, stored_pr.repository, stored_pr.pull_number, e)
-        except OperationError, e:
-            log.warn('list_pull_requests: Failed to fetch data from database: %s', e)
-            raise Exception(e)
+            organization = github.get_organization(stored_pullrequest.organization)
+            repository = organization.get_repo(stored_pullrequest.repository)
+            pullrequest = repository.get_pull(stored_pullrequest.pull_number)
+            head_commit = repository.get_commit(pullrequest.head.sha)
+            jira_key = jira.get_issue_id_from_branch(stored_pullrequest.branch)
+            jira_issue = jira.get_issue(jira_key)
 
-        return pullrequests
+            return {
+                'additions': pullrequest.additions,
+                'assignee': pullrequest.assignee.login if pullrequest.assignee else None,
+                'base': pullrequest.base.ref,
+                'body': pullrequest.body,
+                'changed_files': pullrequest.changed_files,
+                'closed_at': pullrequest.closed_at.isoformat() if pullrequest.closed_at else None,
+                'comments': pullrequest.comments,
+                'comments_url': pullrequest.comments_url,
+                'commits': pullrequest.commits,
+                'commits_url': pullrequest.commits_url,
+                'created_at': pullrequest.created_at.isoformat(),
+                'deletions': pullrequest.deletions,
+                'diff_url': pullrequest.diff_url,
+                'head': pullrequest.head.ref,
+                'html_url': pullrequest.html_url,
+                'id': pullrequest.id,
+                'issue_url': pullrequest.issue_url,
+                'jira_key': jira_key,
+                'jira_summary': jira_issue.fields.summary,
+                'merge_commit_sha': pullrequest.merge_commit_sha,
+                'mergeable': pullrequest.mergeable,
+                'mergeable_state': pullrequest.mergeable_state,
+                'merged': pullrequest.merged,
+                'merged_at': pullrequest.merged_at.isoformat() if pullrequest.merged_at else None,
+                'merged_by': pullrequest.merged_by.login if pullrequest.merged_by else None,
+                'milestone': pullrequest.milestone.id if pullrequest.milestone else None,
+                'number': pullrequest.number,
+                'organization': organization.login,
+                'other_statuses': [{
+                                       'state': status.state,
+                                       'description': status.description,
+                                       'target': status.target_url,
+                                       'context': status.context
+                                   } for status in head_commit.get_statuses()
+                                   if not status.context.startswith("code-review/")],
+                'patch_url': pullrequest.patch_url,
+                'review_comment_url': pullrequest.review_comment_url,
+                'review_comments': pullrequest.review_comments,
+                'review_status': [{
+                                      'state': status.state,
+                                      'description': status.description,
+                                      'target': status.target_url,
+                                      'context': status.context
+                                  } for status in head_commit.get_statuses()
+                                  if status.context.startswith("code-review/")][:1],
+                'repository': repository.name,
+                'state': pullrequest.state,
+                'title': pullrequest.title,
+                'updated_at': pullrequest.updated_at.isoformat() if pullrequest.updated_at else None,
+                'url': pullrequest.url,
+                'user': pullrequest.user.login
+            }
+        except (JIRAError, GithubException, HTTPException), e:
+            log.warn('list_pull_requests: Failed to fetch data of %s/%s/pull/%s: %s',
+                     stored_pullrequest.organization, stored_pullrequest.repository, stored_pullrequest.pull_number, e)
+            return None
+
+    def list_pull_requests(self):
+        pullrequests = []
+
+        for stored_pr in StoredPullRequest.objects():
+            api_pullrequest = self.get_pullrequest(stored_pr)
+            if api_pullrequest is not None:
+                pullrequests.append(api_pullrequest)
+
+        return sorted(pullrequests, key=itemgetter('created_at'))
 
     def sync_pull_requests(self):
 

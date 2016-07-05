@@ -1,5 +1,5 @@
 from mongoengine.document import Document
-from mongoengine.fields import StringField, IntField
+from mongoengine.fields import StringField, IntField, DateTimeField
 
 
 class StoredPullRequest(Document):
@@ -8,3 +8,4 @@ class StoredPullRequest(Document):
     repository = StringField()
     head_commit = StringField()
     pull_number = IntField()
+    created_at = DateTimeField()
