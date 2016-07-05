@@ -1,5 +1,6 @@
 #!/bin/bash -ex
 
+pip install -r /opt/requirements.txt
 pip install --upgrade /opt/dist/nuxeo-tools-hooks-*.tar.gz
 
 # Apache gets grumpy about PID files pre-existing

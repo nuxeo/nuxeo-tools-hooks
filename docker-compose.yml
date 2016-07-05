@@ -13,6 +13,7 @@ services:
     volumes:
       - ./docker/entrypoint.sh:/entrypoint.sh
       - ./nuxeo-tools-hooks/nxtools/hooks/doc/vhost.conf:/etc/apache2/sites-enabled/vhost.conf
+      - ./requirements.txt:/opt/requirements.txt
       - ./dist:/opt/dist
       - ./conf:/opt/conf
       - data:/opt/data
