@@ -34,6 +34,7 @@ class GithubServiceTest(HooksTestCase):
 
         self.mocks.repository.name = 'mock_repository'
         self.mocks.repository.get_pulls.return_value = [PullRequest(None, {}, pull_request, True)]
+        self.mocks.repository.organization = self.mocks.organization
         self.mocks.organization.get_repos.return_value = [self.mocks.repository]
         services.get(Config).set_request_environ({
             Config.ENV_PREFIX + 'GITHUB_SYNC_PULLREQUESTS_ORGANIZATIONS': 'nuxeo,void'
