@@ -11,4 +11,5 @@ Unidecode
 pathlib2
 mongoengine
 mongomock
-
+gevent
+geventhttpclient

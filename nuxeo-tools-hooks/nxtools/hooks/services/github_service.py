@@ -3,6 +3,8 @@ from httplib import HTTPException
 import logging
 from operator import itemgetter
 
+import gevent
+
 import re
 
 from github.GithubException import UnknownObjectException, GithubException
@@ -139,36 +141,43 @@ class GithubService(AbstractService):
     def list_pull_requests(self):
         pullrequests = []
 
-        for stored_pr in StoredPullRequest.objects():
+        def append(stored_pr):
             api_pullrequest = self.get_pullrequest(stored_pr)
             if api_pullrequest is not None:
                 pullrequests.append(api_pullrequest)
 
+        try:
+            gevent.joinall([gevent.spawn(append, stored_pr) for stored_pr in
+                            StoredPullRequest.objects()])
+        except OperationError, e:
+            log.warn('list_pull_requests: Failed to fetch data from database: %s', e)
+            raise Exception(e)
+
         return sorted(pullrequests, key=itemgetter('created_at'))
 
-    def sync_pull_requests(self):
+    def sync_repository_pullrequests(self, repository):
+        organization_name = repository.organization.login
+        repository_name = repository.name
 
+        log.info('Syncing pull requests of %s/%s', organization_name, repository_name)
+        try:
+            gevent.joinall([gevent.spawn(
+                lambda pr: self.create_pullrequest(repository.organization, repository, pr), pullrequest)
+                            for pullrequest in repository.get_pulls()])
+
+        except (HTTPException, GithubException, OperationError), e:
+            log.warn('sync_pull_requests: Failed to fetch pull requests of repository %s/%s: %s',
+                     organization_name, repository_name, e)
+
+    def sync_pull_requests(self):
         for organization_name in re.sub(r"\s+", "", self.config('sync_pullrequests_organizations', ''),
                                         flags=re.UNICODE).split(','):
             try:
                 organization = self.get_organization(organization_name)  # type: Organization
-                for repository in organization.get_repos():  # type: Repository
-                    try:
-                        log.info('Syncing pull requests of %s/%s', organization_name, repository.name)
-                        for pull_request in repository.get_pulls():  # type: PullRequest
-                            stored_pr = StoredPullRequest(
-                                branch=pull_request.head.ref,
-                                organization=organization.login,
-                                repository=repository.name,
-                                head_commit=pull_request.head.sha,
-                                pull_number=pull_request.number
-                            )
 
-                            stored_pr.save()
-
-                    except (HTTPException, GithubException, OperationError), e:
-                        log.warn('sync_pull_requests: Failed to fetch pull requests of repository %s/%s: %s',
-                                 organization_name, repository.name, e)
+                gevent.joinall([gevent.spawn(
+                    lambda repo: self.sync_repository_pullrequests(repo), repository)
+                                for repository in organization.get_repos()])
 
             except (HTTPException, GithubException, NoSuchOrganizationException), e:
                 log.warn('sync_pull_requests: Failed to fetch repositories of %s: %s', organization_name, e)

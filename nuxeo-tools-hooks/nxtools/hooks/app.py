@@ -5,6 +5,9 @@ import os
 
 from flask.app import Flask
 from logging import FileHandler
+
+from geventhttpclient.httplib import HTTPConnection, HTTPSConnection
+from github.Requester import Requester
 from nxtools import services
 from nxtools.hooks import DEFAULTSECT
 from nxtools.hooks.endpoints.api import ApiEndpoint
@@ -61,6 +64,9 @@ class ToolsHooksApp(object):
                 log.debug('%s: %s', key, repr(request_environ[key]))
 
         log.info('Starting Captain Hooks.')
+
+        # Fix Github client to use the genvent concurrent HTTP client classes
+        Requester.injectConnectionClasses(HTTPConnection, HTTPSConnection)
 
         self.__flask = Flask(__name__)
 
