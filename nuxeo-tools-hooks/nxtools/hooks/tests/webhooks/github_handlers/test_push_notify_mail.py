@@ -316,6 +316,8 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
                 email = self.handler.get_commit_email(event, event.commits[0], False)
 
+                self.assertEqual(email.sender, "%s <%s>" % (event.commits[0].author.name, self.handler.sender))
+                self.assertEqual(email.reply_to, "%s <%s>" % (event.commits[0].author.name, event.commits[0].author.email))
                 self.assertMultiLineEqual(email_file.read(), email.body)
                 self.assertEqual(email.to, "ecm-checkins@lists.nuxeo.com")
                 self.mocks.requester.requestJsonAndCheck.assert_called_with("GET", event.repository.url + '/commits/' + event.commits[0].id, None,
