@@ -119,13 +119,13 @@ class GithubService(AbstractService):
                 'patch_url': pullrequest.patch_url,
                 'review_comment_url': pullrequest.review_comment_url,
                 'review_comments': pullrequest.review_comments,
-                'review_status': [{
+                'review_status': ([{
                                       'state': status.state,
                                       'description': status.description,
                                       'target': status.target_url,
                                       'context': status.context
                                   } for status in head_commit.get_statuses()
-                                  if status.context.startswith("code-review/")][:1],
+                                  if status.context.startswith("code-review/")] or [None])[0],
                 'repository': repository.name,
                 'state': pullrequest.state,
                 'title': pullrequest.title,
