@@ -229,7 +229,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
             event = PushEvent(None, None, body, True)
 
-            self.mocks.requester.requestJson.side_effect = Exception
+            self.mocks.requester.requestJsonAndCheck.side_effect = Exception
             self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler.handle(body))
             self.email_service.sendemail.assert_called_once()
 
@@ -308,7 +308,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
             with open('nxtools/hooks/tests/resources/github_handlers/github_push.commit.diff') as diff_file, \
                     open('nxtools/hooks/tests/resources/github_handlers/github_push.email.txt') as email_file:
-                self.mocks.requester.requestJson.return_value = diff_file.read()
+                self.mocks.requester.requestJsonAndCheck.return_value = diff_file.read()
                 self.mocks.repository_url.return_value = event.repository.url
 
                 self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler.handle(body))
@@ -318,5 +318,5 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
                 self.assertMultiLineEqual(email_file.read(), email.body)
                 self.assertEqual(email.to, "ecm-checkins@lists.nuxeo.com")
-                self.mocks.requester.requestJson.assert_called_with("GET", event.commits[0].url, None,
+                self.mocks.requester.requestJsonAndCheck.assert_called_with("GET", event.repository.url + '/commits/' + event.commits[0].id, None,
                                                                     RepositoryWrapper.GITHUB_DIFF_ACCEPT_HEADER, None)

@@ -341,7 +341,7 @@ class RepositoryWrapper(GithubEntityWrapper):
     def get_commit_diff(self, sha):
         assert isinstance(sha, (str, unicode)), sha
 
-        return self._requester.requestJson("GET", self._wrappee.url + "/commit/" + sha, None,
+        return self._requester.requestJsonAndCheck("GET", self._wrappee.url + "/commits/" + sha, None,
                                            RepositoryWrapper.GITHUB_DIFF_ACCEPT_HEADER, None)
 
     def get_commit(self, sha):

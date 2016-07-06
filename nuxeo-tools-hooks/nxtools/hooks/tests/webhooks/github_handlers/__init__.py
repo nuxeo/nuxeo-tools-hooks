@@ -44,5 +44,5 @@ class GithubHookHandlerTest(WebHooksTestCase):
         # Mocks required for nxtools.hooks.entities.github_entities.RepositoryWrapper#get_commit_diff
         self.mocks.repository_url = PropertyMock(return_value="http://null.void/")
         type(self.mocks.organization.get_repo.return_value).url = self.mocks.repository_url
-        self.mocks.requester.requestJson.return_value = "Query mocked"
+        self.mocks.requester.requestJsonAndCheck.return_value = "Query mocked"
         self.mocks.organization.get_repo.return_value._requester = self.mocks.requester
