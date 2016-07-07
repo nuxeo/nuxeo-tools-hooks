@@ -1,13 +1,18 @@
 # -*- coding: utf-8 -*-
+from multiprocessing import Process
 from mock.mock import Mock, patch
 from nxtools import services
-from nxtools.hooks.endpoints.webhook.github_hook import GithubHook
 from nxtools.hooks.entities.github_entities import PushEvent
 from nxtools.hooks.entities.github_entities import RepositoryWrapper
 from nxtools.hooks.services.config import Config
 from nxtools.hooks.services.mail import EmailService
 from nxtools.hooks.tests.webhooks.github_handlers import GithubHookHandlerTest
 from nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail import GithubPushNotifyMailHandler
+
+
+class MockedProcess(Process):
+    def start(self):
+        self.run()
 
 
 class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
@@ -18,6 +23,10 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
         patcher = patch("nxtools.hooks.services.mail.EmailService.sendemail", Mock())
         patcher.start()
         self.addCleanup(patcher.stop)
+
+        patcher2 = patch("nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail.Process", MockedProcess)
+        patcher2.start()
+        self.addCleanup(patcher2.stop)
 
     def get_event_from_body(self, body):
         """
