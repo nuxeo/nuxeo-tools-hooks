@@ -161,9 +161,32 @@ class GithubService(AbstractService):
 
         log.info('Syncing pull requests of %s/%s', organization_name, repository_name)
         try:
+            opened_pulls = repository.get_pulls()
+
+            log.info('Updating %s/%s pull requests: %s',
+                     organization_name, repository_name, ", ".join([str(pull.number) for pull in opened_pulls]))
+
             gevent.joinall([gevent.spawn(
                 lambda pr: self.create_pullrequest(repository.organization, repository, pr), pullrequest)
-                            for pullrequest in repository.get_pulls()])
+                            for pullrequest in opened_pulls])
+
+            uncertain_pulls = StoredPullRequest.objects(
+                organization=organization_name,
+                repository=repository_name,
+                pull_number__nin=[pull.number for pull in opened_pulls])
+
+            log.info('No intel for %s/%s pull requests: %s',
+                     organization_name, repository_name, ", ".join([str(pull.pull_number) for pull in uncertain_pulls]))
+
+            for stored_pull in uncertain_pulls:
+                log.info('Checking status of %s/%s/pull/%d',
+                         organization_name, repository_name, stored_pull.pull_number)
+
+                original_pull = repository.get_pull(stored_pull.pull_number)
+                if "closed" == original_pull.state:
+                    log.info('%s/%s/pull/%d is closed, removing it',
+                             organization_name, repository_name, stored_pull.pull_number)
+                    stored_pull.delete()
 
         except (HTTPException, GithubException, OperationError), e:
             log.warn('sync_pull_requests: Failed to fetch pull requests of repository %s/%s: %s',

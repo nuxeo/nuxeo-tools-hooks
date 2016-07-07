@@ -54,3 +54,23 @@ class GithubServiceTest(HooksTestCase):
                 'ref': stored_pull_request.branch
             }
         })
+
+        new_pull_request = pull_request.copy()
+        new_pull_request['number'] = 43
+        pull_request['state'] = "closed"
+
+        self.mocks.repository.get_pulls.return_value = [PullRequest(None, {}, new_pull_request, True)]
+        self.mocks.repository.get_pull.return_value = PullRequest(None, {}, pull_request, True)
+
+        github.sync_pull_requests()
+
+        self.assertEqual(1, len(StoredPullRequest.objects))
+
+        stored_pull_request = StoredPullRequest.objects[0]  # type: StoredPullRequest
+        self.assertDictEqual(new_pull_request, {
+            'number': stored_pull_request.pull_number,
+            'head': {
+                'sha': stored_pull_request.head_commit,
+                'ref': stored_pull_request.branch
+            }
+        })
