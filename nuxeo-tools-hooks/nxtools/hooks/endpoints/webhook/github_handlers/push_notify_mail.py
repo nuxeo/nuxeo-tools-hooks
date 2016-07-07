@@ -1,5 +1,9 @@
 from importlib import import_module
 
+from multiprocessing import Process
+
+import gevent
+
 import re
 from jinja2.environment import Environment
 from jinja2.loaders import PackageLoader
@@ -117,9 +121,11 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
         if should_exit:
             return 200, exit_message
 
-        for commit in event.commits:
+        def create_and_send(commit):
             email = self.get_commit_email(event, commit, add_warn)
-            email_service.sendemail(email)
+            Process(target=lambda: email_service.sendemail(email)).start()
+
+        gevent.joinall([gevent.spawn(create_and_send, commit) for commit in event.commits])
 
         return 200, GithubPushNotifyMailHandler.MSG_OK
 
