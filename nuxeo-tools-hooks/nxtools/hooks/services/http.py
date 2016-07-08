@@ -72,6 +72,11 @@ class HTTPService(AbstractService):
 
 class CachingHTTPMixin(object):
 
+    HEADER_ETAG_REQUEST = 'If-None-Match'
+    HEADER_ETAG_RESPONSE = 'ETag'
+
+    HEADER_LAST_MODIFIED_REQUEST = 'If-Modified-Since'
+
     def __init__(self, cls):
         self._cache = services.get(HTTPService).cache  # type: HTTPCache
         self._cached_key = None
@@ -84,21 +89,26 @@ class CachingHTTPMixin(object):
 
         if cache.has(*self._cached_key):
             self._cached_response = cache.get(*self._cached_key)
+
+            if CachingHTTPMixin.HEADER_ETAG_REQUEST.lower() not in [h.lower() for h in headers] \
+                    or CachingHTTPMixin.HEADER_LAST_MODIFIED_REQUEST.lower() not in [h.lower() for h in headers]:
+                headers[CachingHTTPMixin.HEADER_ETAG_REQUEST] = \
+                    self._cached_response[CachingHTTPMixin.HEADER_ETAG_RESPONSE]
         else:
             self._cached_response = None
-            self._connection_class.request(self, method, url, body, headers)
+
+        self._connection_class.request(self, method, url, body, headers)
 
     def getresponse(self, buffering=False):
         cache = services.get(HTTPService).cache
 
-        if self._cached_response is not None:
+        response = self._connection_class.getresponse(self, buffering)
+        if self._cached_response is not None and 304 == response.status_code:
             return self._cached_response
         else:
             method, url, body, headers = self._cached_key
-            response = self._connection_class.getresponse(self, buffering)
-
             cache.set(method, url, response, body, headers)
-            return response
+        return response
 
 
 class CachingHTTPConnection(HTTPConnection, CachingHTTPMixin):
