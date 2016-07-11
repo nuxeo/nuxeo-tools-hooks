@@ -1,10 +1,13 @@
 import hashlib
+import logging
 
 from abc import ABCMeta, abstractmethod
 
 from geventhttpclient.httplib import HTTPConnection, HTTPSConnection
 from nxtools import ServiceContainer, services
 from nxtools.hooks.services import AbstractService
+
+log = logging.getLogger(__name__)
 
 
 class HTTPCache(object):
@@ -22,6 +25,36 @@ class HTTPCache(object):
     def has(self, method, url, body=None, headers={}):
         pass
 
+class CachableHTTPResponse(object):
+    __metaclass__ = ABCMeta
+
+    def __init__(self, wrappee):
+        object.__setattr__(self, "_wrappee", wrappee)
+        object.__setattr__(self, "_cached_body", None)
+
+    def __getattr__(self, name):
+        return getattr(self._wrappee, name)
+
+    def __setattr__(self, name, value):
+        if hasattr(self, name):
+            object.__setattr__(self, name, value)
+        else:
+            object.__setattr__(self._wrappee, name, value)
+
+    def __getitem__(self, item):
+        return self._wrappee[item]
+
+    def __eq__(self, other):
+        return self._wrappee == other
+
+
+class MemoryCachableHTTPResponse(CachableHTTPResponse):
+
+    def read(self, amt=None):
+        if self._cached_body is None:
+            self._cached_body = self._wrappee.read(amt)
+        return self._cached_body
+
 
 class MemoryHTTPCache(HTTPCache):
 
@@ -29,8 +62,8 @@ class MemoryHTTPCache(HTTPCache):
         self._data = list()
 
     @staticmethod
-    def build_key( method, url, body, headers):
-        return method, url, len(body), str(hashlib.md5(body)), {key.lower(): value for key, value in headers.iteritems()}
+    def build_key(method, url, body, headers):
+        return method, url, len(body), hashlib.md5(body).hexdigest(), {key.lower(): value for key, value in headers.iteritems()}
 
     def get(self, method, url, body=None, headers={}, default=None):
         for key, value in self._data:
@@ -47,7 +80,8 @@ class MemoryHTTPCache(HTTPCache):
                 del self._data[index]
                 break
 
-        return self._data.append((key, response))
+        self._data.append((key, response))
+        return self
 
     def has(self, method, url, body=None, headers={}):
         key = MemoryHTTPCache.build_key(method, url, body, headers)
@@ -63,11 +97,16 @@ class MemoryHTTPCache(HTTPCache):
 class HTTPService(AbstractService):
 
     default_cache = MemoryHTTPCache()
+    default_response_class = MemoryCachableHTTPResponse
 
     @property
     def cache(self):
         """ :rtype: nxtools.hooks.services.http.MemoryHTTPCache """
         return self.default_cache
+
+    @property
+    def response_class(self):
+        return self.default_response_class
 
 
 class CachingHTTPMixin(object):
@@ -104,11 +143,14 @@ class CachingHTTPMixin(object):
 
         response = self._connection_class.getresponse(self, buffering)
         if self._cached_response is not None and 304 == response.status_code:
+            log.debug('Cache hit: %s', self._cached_key)
             return self._cached_response
         else:
+            log.debug('Cache miss: %s', self._cached_key)
             method, url, body, headers = self._cached_key
-            cache.set(method, url, response, body, headers)
-        return response
+            cachable_response = services.get(HTTPService).response_class(response)
+            cache.set(method, url, cachable_response, body, headers)
+            return cachable_response
 
 
 class CachingHTTPConnection(HTTPConnection, CachingHTTPMixin):
@@ -135,4 +177,3 @@ class CachingHTTPSConnection(HTTPSConnection, CachingHTTPMixin):
 
     def getresponse(self, buffering=False):
         return CachingHTTPMixin.getresponse(self, buffering)
-
