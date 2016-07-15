@@ -148,7 +148,7 @@ class GithubService(AbstractService):
 
         try:
             gevent.joinall([gevent.spawn(append, stored_pr) for stored_pr in
-                            StoredPullRequest.objects()])
+                            StoredPullRequest.objects(repository='nuxeo-connect-priv', pull_number=3)])
         except OperationError, e:
             log.warn('list_pull_requests: Failed to fetch data from database: %s', e)
             raise Exception(e)

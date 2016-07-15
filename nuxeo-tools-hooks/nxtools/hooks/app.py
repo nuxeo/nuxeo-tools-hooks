@@ -5,6 +5,7 @@ import os
 
 from flask.app import Flask
 from logging import FileHandler
+from logging.config import fileConfig
 
 from github.Requester import Requester
 from nxtools import services
@@ -13,7 +14,7 @@ from nxtools.hooks.endpoints.api import ApiEndpoint
 from nxtools.hooks.endpoints.webhook import WebHookEndpoint
 from nxtools.hooks.services.config import Config
 from nxtools.hooks.services.database import DatabaseService
-from nxtools.hooks.services.http import CachingHTTPConnection, CachingHTTPSConnection
+from nxtools.hooks.services.http.cache import CachingHTTPConnection, CachingHTTPSConnection
 from werkzeug.serving import run_simple
 
 
@@ -56,6 +57,10 @@ class ToolsHooksApp(object):
             log_level = self.config.get(DEFAULTSECT, 'log_level', 'INFO').upper()
 
         logging.root.setLevel(log_level)
+
+        logging_config_file = self.config.get(DEFAULTSECT, "logging_config_file")
+        if logging_config_file:
+            fileConfig(logging_config_file)
 
         if self.config.get(DEFAULTSECT, "debug", False):
             keys = request_environ.keys()

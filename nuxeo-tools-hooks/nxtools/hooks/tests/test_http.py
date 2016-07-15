@@ -1,6 +1,6 @@
 from geventhttpclient.httplib import HTTPResponse
 from mock.mock import patch
-from nxtools.hooks.services.http import CachingHTTPConnection, CachingHTTPMixin
+from nxtools.hooks.services.http.cache import CachingHTTPConnection, CachingHTTPMixin
 from nxtools.hooks.tests import HooksTestCase
 
 
