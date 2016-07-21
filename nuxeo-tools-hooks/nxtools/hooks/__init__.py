@@ -16,4 +16,8 @@ limitations under the License.
 Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
 """
+import pkg_resources
+
 DEFAULTSECT = "general"
+
+__version__ = pkg_resources.get_distribution('nuxeo-tools-hooks').version
