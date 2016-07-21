@@ -13,7 +13,7 @@ def find_files(paths):
 
 setup(
     name='nuxeo-tools-hooks',
-    version='1.0.0.dev1',
+    version='1.0.0',
     license='ASL',
     author='Nuxeo',
     author_email='contact@nuxeo.com',
