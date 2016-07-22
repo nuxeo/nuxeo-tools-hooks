@@ -363,7 +363,7 @@ class RepositoryWrapper(GithubEntityWrapper):
         headers, body = self._requester.requestJsonAndCheck("GET", self._wrappee.url + "/commits/" + sha, None,
                                            RepositoryWrapper.GITHUB_DIFF_ACCEPT_HEADER, None)
 
-        return body['data']
+        return unicode(body['data'])
 
     def get_commit(self, sha):
         assert isinstance(sha, (str, unicode)), sha

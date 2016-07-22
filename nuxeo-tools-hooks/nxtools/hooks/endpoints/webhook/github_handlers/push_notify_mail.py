@@ -192,8 +192,8 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
         if self.is_jenkins(event) and commit.committer.email != self.jenkins_email:
             committer_name += " via Jenkins"
 
-        real_address = "%s <%s>" % (committer_name, commit.committer.email)
-        fake_address = "%s <%s>" % (committer_name, self.sender)
+        real_address = u"%s <%s>" % (committer_name, commit.committer.email)
+        fake_address = u"%s <%s>" % (committer_name, self.sender)
 
         if event.pusher.email and commit.committer.email and event.pusher.email != commit.committer.email:
             pusher = "%s <%s>" % (event.pusher.name, event.pusher.email)
@@ -208,7 +208,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
             diff = "Could not read diff - see %s.diff for raw diff" % commit.url
             diff += "\n(Error: %s)\n" % (str(e))
 
-        subject = "%s: %s (branch@%s)" % (event.repository.name, commit.message, self.get_branch_short_name(event))
+        subject = u"%s: %s (branch@%s)" % (event.repository.name, commit.message, self.get_branch_short_name(event))
 
         if with_warn:
             subject = "[WARN] " + subject

@@ -19,8 +19,12 @@ Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
 """
 
+
+import codecs
+from gevent.greenlet import Greenlet
 from multiprocessing import Process
 from mock.mock import Mock, patch
+
 from nxtools import services
 from nxtools.hooks.entities.github_entities import PushEvent
 from nxtools.hooks.entities.github_entities import RepositoryWrapper
@@ -35,18 +39,24 @@ class MockedProcess(Process):
         self.run()
 
 
+def mocked_spawn(run=None, *args, **kwargs):
+    run(*args, **kwargs)
+    return Greenlet.spawn(lambda: None)
+
+
 class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
     def setUp(self):
         super(GithubNotifyMailHandlerTest, self).setUp()
 
-        patcher = patch("nxtools.hooks.services.mail.EmailService.sendemail", Mock())
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        patchers = [
+            patch("nxtools.hooks.services.mail.EmailService.sendemail", Mock()),
+            patch("gevent.spawn", mocked_spawn),
+            patch("nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail.Process", MockedProcess),
+        ]
 
-        patcher2 = patch("nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail.Process", MockedProcess)
-        patcher2.start()
-        self.addCleanup(patcher2.stop)
+        [patcher.start() for patcher in patchers]
+        [self.addCleanup(patcher.stop) for patcher in patchers]
 
     def get_event_from_body(self, body):
         """
@@ -335,8 +345,10 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
             self.assertTupleEqual((False, False, None), self.handler.check_branch_ignored(event))
 
-            with open('nxtools/hooks/tests/resources/github_handlers/github_push.commit.diff') as diff_file, \
-                    open('nxtools/hooks/tests/resources/github_handlers/github_push.email.txt') as email_file:
+            with codecs.open('nxtools/hooks/tests/resources/github_handlers/github_push.commit.diff',
+                             encoding='utf-8') as diff_file, \
+                    codecs.open('nxtools/hooks/tests/resources/github_handlers/github_push.email.txt',
+                                encoding='utf-8') as email_file:
                 self.mocks.requester.requestJsonAndCheck.return_value = ({}, {'data': diff_file.read()})
                 self.mocks.repository_url.return_value = event.repository.url
 
