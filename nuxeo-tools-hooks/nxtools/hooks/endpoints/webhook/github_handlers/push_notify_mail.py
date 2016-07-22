@@ -18,12 +18,12 @@ Contributors:
 """
 
 from importlib import import_module
-
 from multiprocessing import Process
 
 import gevent
-
 import re
+import logging
+
 from jinja2.environment import Environment
 from jinja2.loaders import PackageLoader
 from nxtools import services, ServiceContainer
@@ -34,6 +34,8 @@ from nxtools.hooks.entities.mail import Email
 from nxtools.hooks.services.github_service import GithubService
 from nxtools.hooks.services.mail import EmailService
 from unidecode import unidecode
+
+log = logging.getLogger(__name__)
 
 
 @ServiceContainer.service
@@ -141,8 +143,12 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
             return 200, exit_message
 
         def create_and_send(commit):
-            email = self.get_commit_email(event, commit, add_warn)
-            Process(target=lambda: email_service.sendemail(email)).start()
+            try:
+                email = self.get_commit_email(event, commit, add_warn)
+                Process(target=lambda: email_service.sendemail(email)).start()
+            except Exception as e:
+                log.warn("Failed to create email for commit: %s", commit.url)
+                raise e
 
         gevent.joinall([gevent.spawn(create_and_send, commit) for commit in event.commits])
 
