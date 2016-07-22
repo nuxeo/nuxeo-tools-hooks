@@ -345,8 +345,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
             self.assertTupleEqual((False, False, None), self.handler.check_branch_ignored(event))
 
-            with codecs.open('nxtools/hooks/tests/resources/github_handlers/github_push.commit.diff',
-                             encoding='utf-8') as diff_file, \
+            with open('nxtools/hooks/tests/resources/github_handlers/github_push.commit.diff') as diff_file, \
                     codecs.open('nxtools/hooks/tests/resources/github_handlers/github_push.email.txt',
                                 encoding='utf-8') as email_file:
                 self.mocks.requester.requestJsonAndCheck.return_value = ({}, {'data': diff_file.read()})
