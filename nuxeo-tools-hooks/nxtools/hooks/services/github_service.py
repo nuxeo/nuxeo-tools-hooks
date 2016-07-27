@@ -86,6 +86,7 @@ class GithubService(AbstractService):
         stored_pr.head_commit = pull_request.head.sha
         stored_pr.created_at = pull_request.created_at
         stored_pr.save()
+        log.info('Pull request %s/%s/pull/%d saved', organization.login, repository.name, pull_request.number)
 
     def get_pullrequest(self, stored_pullrequest):
         github = services.get(GithubService)  # type: GithubService
@@ -167,7 +168,7 @@ class GithubService(AbstractService):
 
         try:
             gevent.joinall([gevent.spawn(append, stored_pr) for stored_pr in
-                            StoredPullRequest.objects(repository='nuxeo-connect-priv', pull_number=3)])
+                            StoredPullRequest.objects()])
         except OperationError, e:
             log.warn('list_pull_requests: Failed to fetch data from database: %s', e)
             raise Exception(e)
@@ -182,30 +183,32 @@ class GithubService(AbstractService):
         try:
             opened_pulls = repository.get_pulls()
 
-            log.info('Updating %s/%s pull requests: %s',
-                     organization_name, repository_name, ", ".join([str(pull.number) for pull in opened_pulls]))
+            if opened_pulls:
+                log.info('Updating %s/%s pull requests: %s',
+                         organization_name, repository_name, ", ".join([str(pull.number) for pull in opened_pulls]))
 
-            gevent.joinall([gevent.spawn(
-                lambda pr: self.create_pullrequest(repository.organization, repository, pr), pullrequest)
-                            for pullrequest in opened_pulls])
+                gevent.joinall([gevent.spawn(
+                    lambda pr: self.create_pullrequest(repository.organization, repository, pr), pullrequest)
+                                for pullrequest in opened_pulls])
 
-            uncertain_pulls = StoredPullRequest.objects(
-                organization=organization_name,
-                repository=repository_name,
-                pull_number__nin=[pull.number for pull in opened_pulls])
+                uncertain_pulls = StoredPullRequest.objects(
+                    organization=organization_name,
+                    repository=repository_name,
+                    pull_number__nin=[pull.number for pull in opened_pulls])
 
-            log.info('No intel for %s/%s pull requests: %s',
-                     organization_name, repository_name, ", ".join([str(pull.pull_number) for pull in uncertain_pulls]))
+                if uncertain_pulls:
+                    log.info('No intel fetched for %s/%s pull requests: %s',
+                             organization_name, repository_name, ", ".join([str(pull.pull_number) for pull in uncertain_pulls]))
 
-            for stored_pull in uncertain_pulls:
-                log.info('Checking status of %s/%s/pull/%d',
-                         organization_name, repository_name, stored_pull.pull_number)
+                    for stored_pull in uncertain_pulls:
+                        log.info('Checking status of %s/%s/pull/%d',
+                                 organization_name, repository_name, stored_pull.pull_number)
 
-                original_pull = repository.get_pull(stored_pull.pull_number)
-                if "closed" == original_pull.state:
-                    log.info('%s/%s/pull/%d is closed, removing it',
-                             organization_name, repository_name, stored_pull.pull_number)
-                    stored_pull.delete()
+                        original_pull = repository.get_pull(stored_pull.pull_number)
+                        if "closed" == original_pull.state:
+                            log.info('%s/%s/pull/%d is closed, removing it',
+                                     organization_name, repository_name, stored_pull.pull_number)
+                            stored_pull.delete()
 
         except (HTTPException, GithubException, OperationError), e:
             log.warn('sync_pull_requests: Failed to fetch pull requests of repository %s/%s: %s',
