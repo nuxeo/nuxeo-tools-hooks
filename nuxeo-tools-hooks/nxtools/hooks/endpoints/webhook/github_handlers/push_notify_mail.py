@@ -135,7 +135,11 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
         email_service = services.get(EmailService)
 
         if self.is_bad_ref(event):
-            return 400, GithubPushNotifyMailHandler.MSG_BAD_REF % event.ref
+            log.info("Unhandled ref: %s/%s:%s",
+                     event.organization.login,
+                     event.repository.name,
+                     event.ref)
+            return 200, GithubPushNotifyMailHandler.MSG_BAD_REF % event.ref
 
         should_exit, add_warn, exit_message = self.check_branch_ignored(event)
 

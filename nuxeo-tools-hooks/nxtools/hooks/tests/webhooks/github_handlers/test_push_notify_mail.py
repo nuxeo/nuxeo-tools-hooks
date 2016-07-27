@@ -93,7 +93,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
             body["ref"] = "refs/wrong/anything"
 
             self.assertTrue(self.handler.is_bad_ref(self.get_event_from_body(body)))
-            self.assertTupleEqual((400, GithubPushNotifyMailHandler.MSG_BAD_REF % body["ref"]),
+            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_BAD_REF % body["ref"]),
                                   self.handler.handle(body))
             self.email_service.sendemail.assert_not_called()
 
