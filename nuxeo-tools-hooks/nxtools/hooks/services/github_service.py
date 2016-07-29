@@ -183,7 +183,7 @@ class GithubService(AbstractService):
         try:
             opened_pulls = repository.get_pulls()
 
-            if opened_pulls:
+            if opened_pulls.totalCount:
                 log.info('Updating %s/%s pull requests: %s',
                          organization_name, repository_name, ", ".join([str(pull.number) for pull in opened_pulls]))
 

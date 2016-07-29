@@ -28,6 +28,12 @@ from nxtools.hooks.tests import HooksTestCase
 
 class GithubServiceTest(HooksTestCase):
 
+    class MockedPullRequestList(list):
+
+        @property
+        def totalCount(self):
+            return self.__len__()
+
     def setUp(self):
         super(GithubServiceTest, self).setUp()
 
@@ -49,10 +55,13 @@ class GithubServiceTest(HooksTestCase):
             }
         }
 
+        pull_requests_list = GithubServiceTest.MockedPullRequestList()
+        pull_requests_list.append(PullRequest(None, {}, pull_request, True))
+
         self.assertEqual(0, len(StoredPullRequest.objects))
 
         self.mocks.repository.name = 'mock_repository'
-        self.mocks.repository.get_pulls.return_value = [PullRequest(None, {}, pull_request, True)]
+        self.mocks.repository.get_pulls.return_value = pull_requests_list
         self.mocks.repository.organization = self.mocks.organization
         self.mocks.organization.get_repos.return_value = [self.mocks.repository]
         services.get(Config).set_request_environ({
@@ -78,7 +87,10 @@ class GithubServiceTest(HooksTestCase):
         new_pull_request['number'] = 43
         pull_request['state'] = "closed"
 
-        self.mocks.repository.get_pulls.return_value = [PullRequest(None, {}, new_pull_request, True)]
+        pull_requests_list = GithubServiceTest.MockedPullRequestList()
+        pull_requests_list.append(PullRequest(None, {}, new_pull_request, True))
+
+        self.mocks.repository.get_pulls.return_value = pull_requests_list
         self.mocks.repository.get_pull.return_value = PullRequest(None, {}, pull_request, True)
 
         github.sync_pull_requests()
