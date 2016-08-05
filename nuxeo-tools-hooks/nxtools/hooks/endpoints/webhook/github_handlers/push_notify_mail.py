@@ -189,17 +189,18 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
         :rtype: nxtools.hooks.entities.mail.Email
         """
         template = self._jinja.get_template(self.email_template)
-        committer_name = commit.committer.name
+        author_name = commit.author.name
+        author_email = commit.author.email
         pusher = None
         jira_tickets = []
 
-        if self.is_jenkins(event) and commit.committer.email != self.jenkins_email:
-            committer_name += " via Jenkins"
+        if self.is_jenkins(event) and author_email != self.jenkins_email:
+            author_name += " via Jenkins"
 
-        real_address = u"%s <%s>" % (committer_name, commit.committer.email)
-        fake_address = u"%s <%s>" % (committer_name, self.sender)
+        real_address = u"%s <%s>" % (author_name, author_email)
+        fake_address = u"%s <%s>" % (author_name, self.sender)
 
-        if event.pusher.email and commit.committer.email and event.pusher.email != commit.committer.email:
+        if event.pusher.email and author_email and event.pusher.email != author_email:
             pusher = "%s <%s>" % (event.pusher.name, event.pusher.email)
 
         for match in self.jira_regex.finditer(commit.message):

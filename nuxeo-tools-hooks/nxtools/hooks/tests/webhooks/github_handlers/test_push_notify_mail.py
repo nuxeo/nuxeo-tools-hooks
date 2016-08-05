@@ -235,7 +235,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
             self.assertTrue(body["commits"][0])
             body["commits"][0]["message"] += u" héhé"
-            body["commits"][0]["committer"]["name"] += u" héhé"
+            body["commits"][0]["author"]["name"] += u" héhé"
 
             event = PushEvent(None, None, body, True)
             self.assertFalse(self.handler.is_bad_ref(event))
