@@ -18,17 +18,16 @@ Contributors:
 """
 
 from httplib import HTTPException
-
-import logging
 from operator import itemgetter
 
+import logging
 import gevent
-
 import re
 
 from github.GithubException import UnknownObjectException, GithubException
 from github.MainClass import Github
 from github.Organization import Organization
+from github.Repository import Repository
 from jira.exceptions import JIRAError
 from mongoengine.errors import OperationError
 from nxtools import ServiceContainer, services
@@ -231,3 +230,26 @@ class GithubService(AbstractService):
 
             except (HTTPException, GithubException, NoSuchOrganizationException), e:
                 log.warn('sync_pull_requests: Failed to fetch repositories of %s: %s', organization_name, e)
+
+    def setup_webhooks(self, organization_name, repository_name, hooks_config):
+        try:
+            organization = self.get_organization(organization_name)  # type: Organization
+            repository = organization.get_repo(repository_name)  # type: Repository
+            hooks = repository.get_hooks()
+
+            if 'absent' in hooks_config:
+                for hook in list(hooks):
+                    if hook.name in hooks_config['absent'] or hook.url in [h['url'] for h in hooks_config['absent']
+                                                                           if type(h) is dict and 'url' in h]:
+                        hook.delete()
+                        hooks.remove(hook)
+            if 'present' in hooks_config:
+                for hook in hooks:
+                    [hook.edit(h['name'], h['config'], h['events'], active=h['active'])
+                     for h in hooks_config['present'] if h['name'] == hook.name]
+                [repository.create_hook(h['name'], h['config'], h['events'], h['active'])
+                 for h in hooks_config['present'] if h['name'] not in [hook.name for hook in hooks]]
+
+        except (HTTPException, GithubException, NoSuchOrganizationException), e:
+            log.warn('setup_webhooks: Failed setup webhooks of %s/%s: %s', organization_name, repository_name, e)
+            raise Exception(e)

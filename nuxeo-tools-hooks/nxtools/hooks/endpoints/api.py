@@ -18,9 +18,9 @@ Contributors:
 """
 
 import json
-
 import logging
 
+from flask import request
 from flask.blueprints import Blueprint
 from flask_cors.extension import CORS
 from nxtools import ServiceContainer, services
@@ -102,6 +102,22 @@ class ApiEndpoint(AbstractEndpoint, BootableService):
             return json.dumps(services.get(GithubService).list_pull_requests())
         except Exception, e:
             log.warn('list_pull_requests: Could not list pull requests: %s', e)
+            return 'KO', 500
+
+    @staticmethod
+    @__blueprint.route('/github/<organisation>/<repository>/webhooks', methods=['POST'])
+    @CSRFService.secured
+    @OAuthService.secured
+    def setup_webhooks(organisation, repository):
+        try:
+            data = json.loads(request.data)
+            if 'config' in data:
+                services.get(GithubService).setup_webhooks(organisation, repository, data['config'])
+                return 'OK', 200
+            else:
+                return 'KO', 400
+        except Exception, e:
+            log.warn('setup_webhooks: Could not setup %s/%s webhooks: %s', organisation, repository, e)
             return 'KO', 500
 
     def get_cors_config(self):
