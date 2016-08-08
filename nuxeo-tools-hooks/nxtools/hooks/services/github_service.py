@@ -182,8 +182,13 @@ class GithubService(AbstractService):
         log.info('Syncing pull requests of %s/%s', organization_name, repository_name)
         try:
             opened_pulls = repository.get_pulls()
+            pulls_count = 0
 
-            if opened_pulls.totalCount:
+            # Fix no count available on pulls list
+            for _ in opened_pulls:
+                pulls_count += 1
+
+            if pulls_count > 0:
                 log.info('Updating %s/%s pull requests: %s',
                          organization_name, repository_name, ", ".join([str(pull.number) for pull in opened_pulls]))
 
