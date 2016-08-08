@@ -276,7 +276,7 @@ def suffix_ignore(handler, event):
         if branch.endswith(suffix):
             if handler.is_jenkins(event):
                 return True, False, GithubPushNotifyMailHandler.MSG_IGNORE_BRANCH % branch
-        return False, True, ""
+            return False, True, ""
     return False, False, None
 
 

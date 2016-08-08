@@ -339,6 +339,10 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
     def test_standard_payload(self):
         with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
+            self.config._config.set(self.handler.config_section, "ignored_branch_suffixes", "-SNAPSHOT")
+            self.config._config.set(self.handler.config_section, "ignore_checks",
+                                    "nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail."
+                                    "suffix_ignore")
 
             self.assertTrue(body["commits"][0])
             event = PushEvent(None, None, body, True)
