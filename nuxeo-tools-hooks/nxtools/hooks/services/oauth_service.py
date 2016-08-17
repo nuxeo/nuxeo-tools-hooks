@@ -25,6 +25,7 @@ from flask.globals import request
 from nxtools import ServiceContainer, services
 from nxtools.hooks.services.config import Config
 from nxtools.hooks.services.csrf import CSRFService
+from nxtools.hooks.services.github_service import GithubService
 from nxtools.hooks.services.jwt_service import JwtService
 from requests_oauthlib.oauth2_session import OAuth2Session
 
@@ -37,6 +38,8 @@ class OAuthService(object):
     __blueprint = Blueprint('oauth', __name__)
 
     CONFIG_SECTION = 'OAuthService'
+    GITHUB_TOKEN_HEADER = 'X-GITHUB-ACCESS-TOKEN'
+    JWT_GITHUB_TOKEN = 'gat'
 
     @staticmethod
     def secured(fn):
@@ -50,9 +53,25 @@ class OAuthService(object):
                 return 'Unauthorized', 401
         return decorated
 
+    @staticmethod
+    def header_log_in(fn):
+        @wraps(fn)
+        def decorated(*args, **kwargs):
+            if OAuthService.GITHUB_TOKEN_HEADER in request.headers:
+                services.get(JwtService).set(
+                    OAuthService.JWT_GITHUB_TOKEN, request.headers[OAuthService.GITHUB_TOKEN_HEADER])
+                services.get(CSRFService).update()
+            return fn(*args, **kwargs)
+        return decorated
+
     @property
     def authenticated(self):
-        return services.get(JwtService).has_jwt()
+        jwt_service = services.get(JwtService)
+        if jwt_service.has_jwt():
+            github_token = jwt_service.get(OAuthService.JWT_GITHUB_TOKEN)
+            if github_token is not None:
+                return services.get(GithubService).check_oauth_token(github_token) is not False
+        return False
 
     def config(self, key, default=None):
         return services.get(Config).get(OAuthService.CONFIG_SECTION, key, default)
@@ -63,6 +82,6 @@ class OAuthService(object):
                                           client_secret=self.config('consumer_secret'),
                                           code=code)
 
-        services.get(JwtService).set('gat', github_token['access_token'])  # Github Access Token
+        services.get(JwtService).set(OAuthService.JWT_GITHUB_TOKEN, github_token['access_token'])  # Github Access Token
         services.get(CSRFService).update()
         return 'OK'

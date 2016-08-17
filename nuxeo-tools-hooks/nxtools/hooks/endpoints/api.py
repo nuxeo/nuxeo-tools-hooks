@@ -71,16 +71,10 @@ class ApiEndpoint(AbstractEndpoint, BootableService):
 
     @staticmethod
     @__blueprint.route('/me')
+    @OAuthService.header_log_in
     @OAuthService.secured
     def me():
-        try:
-            if services.get(OAuthService).authenticated:
-                return 'OK'
-            else:
-                return 'KO', 401
-        except Exception, e:
-            log.warn('me: Could not check for authentication: %s', e)
-            return 'KO', 500
+        return 'OK'
 
     @staticmethod
     @__blueprint.route('/pull_requests/sync', methods=['POST'])

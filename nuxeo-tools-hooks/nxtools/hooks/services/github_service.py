@@ -52,6 +52,14 @@ class GithubService(AbstractService):
     def __init__(self):
         self.__organizations = {}
 
+    def check_oauth_token(self, token):
+        github = Github(token)
+        try:
+            github.get_user().id
+        except GithubException, e:
+            log.warn('Could not check oauth token "%s": %s', token, e)
+            return False
+
     def get_organization(self, name):
         """
         :rtype: nxtools.hooks.entities.github_entities.OrganizationWrapper
