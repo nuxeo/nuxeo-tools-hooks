@@ -39,7 +39,6 @@ class OAuthService(object):
 
     CONFIG_SECTION = 'OAuthService'
     GITHUB_TOKEN_HEADER = 'X-GITHUB-ACCESS-TOKEN'
-    JWT_GITHUB_TOKEN = 'gat'
 
     @staticmethod
     def secured(fn):
@@ -59,7 +58,7 @@ class OAuthService(object):
         def decorated(*args, **kwargs):
             if OAuthService.GITHUB_TOKEN_HEADER in request.headers:
                 services.get(JwtService).set(
-                    OAuthService.JWT_GITHUB_TOKEN, request.headers[OAuthService.GITHUB_TOKEN_HEADER])
+                    JwtService.JWT_GITHUB_TOKEN, request.headers[OAuthService.GITHUB_TOKEN_HEADER])
                 services.get(CSRFService).update()
             return fn(*args, **kwargs)
         return decorated
@@ -68,7 +67,7 @@ class OAuthService(object):
     def authenticated(self):
         jwt_service = services.get(JwtService)
         if jwt_service.has_jwt():
-            github_token = jwt_service.get(OAuthService.JWT_GITHUB_TOKEN)
+            github_token = jwt_service.get(JwtService.JWT_GITHUB_TOKEN)
             if github_token is not None:
                 return services.get(GithubService).check_oauth_token(github_token) is not False
         return False
@@ -82,6 +81,6 @@ class OAuthService(object):
                                           client_secret=self.config('consumer_secret'),
                                           code=code)
 
-        services.get(JwtService).set(OAuthService.JWT_GITHUB_TOKEN, github_token['access_token'])  # Github Access Token
+        services.get(JwtService).set(JwtService.JWT_GITHUB_TOKEN, github_token['access_token'])  # Github Access Token
         services.get(CSRFService).update()
         return 'OK'

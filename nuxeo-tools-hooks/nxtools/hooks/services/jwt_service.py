@@ -36,6 +36,8 @@ log = logging.getLogger(__name__)
 @ServiceContainer.service
 class JwtService(AbstractService):
 
+    JWT_GITHUB_TOKEN = 'gat'
+
     def decode(self, create=False):
         if 'decoded_jwt' not in g:
             if 'access_token' in request.cookies:
