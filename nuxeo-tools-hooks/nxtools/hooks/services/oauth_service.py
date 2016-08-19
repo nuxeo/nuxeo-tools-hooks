@@ -17,9 +17,11 @@ Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
 """
 
+import json
 import logging
 
 from functools import wraps
+
 from flask.blueprints import Blueprint
 from flask.globals import request
 from nxtools import ServiceContainer, services
@@ -39,17 +41,24 @@ class OAuthService(object):
 
     CONFIG_SECTION = 'OAuthService'
     GITHUB_TOKEN_HEADER = 'X-GITHUB-ACCESS-TOKEN'
+    GITHUB_SCOPE = 'user:email'
+    GITHUB_OAUTH_LOGIN = 'https://github.com/login/oauth/authorize'
 
     @staticmethod
     def secured(fn):
         @wraps(fn)
         def decorated(*args, **kwargs):
             if services.get(OAuthService).authenticated:
-                log.debug(' * Authorized request to ' + request.url)
+                log.debug('Authorized request to ' + request.url)
                 return fn(*args, **kwargs)
             else:
-                log.warn(' * Unauthorized request to ' + request.url)
-                return 'Unauthorized', 401
+                log.warn('Unauthorized request to ' + request.url)
+                return json.dumps({
+                    'github': OAuthService.GITHUB_OAUTH_LOGIN + '?client_id=%s&scope=%s&redirect_uri=%s' % (
+                        services.get(OAuthService).config('client_id'),
+                        OAuthService.GITHUB_SCOPE,
+                        request.environ['HTTP_ORIGIN'] if 'HTTP_ORIGIN' in request.environ else 'http://localhost:5000')
+                }), 401
         return decorated
 
     @staticmethod
