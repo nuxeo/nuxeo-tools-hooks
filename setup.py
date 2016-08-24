@@ -31,16 +31,16 @@ setup(
     package_data={"nxtools.hooks": find_files(["doc/*", "**/resources/*"])},
     install_requires=[
         'Flask==0.11.1',
-        'Flask-Cors==2.1.2',
+        'Flask-Cors==2.1.3',
         'requests-oauthlib==0.6.2',
-        'PyJWT==1.4.1',
+        'PyJWT==1.4.2',
         'cryptography==1.4',
-        'PyGithub==1.26.0',
-        'jira==1.0.3',
+        'PyGithub==1.27.1',
+        'jira==1.0.7',
         'Jinja2==2.8',
         'Unidecode==0.4.19',
         'mongoengine==0.10.6',
-        'gevent==1.1.1',
-        'geventhttpclient==1.3.0'
+        'gevent==1.1.2',
+        'geventhttpclient==1.3.1'
     ]
 )
