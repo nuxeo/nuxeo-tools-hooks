@@ -18,11 +18,41 @@ Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
 """
 import os
+import logging
+
+import json
+import requests
+import sys
+
+from urlparse import urljoin
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 class CaptainHooksClient:
 
-    API_URL = os.getenv('CAPTAIN_HOOKS_URL', 'http://localhost:5000')
+    CAPTAIN_HOOKS_URL = os.getenv('CAPTAIN_HOOKS_URL', 'http://localhost:5000')
+    COOKIE_JWT = 'access_token'
+    HEADER_CSRF = 'X-CSRFToken'
 
-    def __init__(self):
-        pass
+    def __init__(self, github_token):
+        login_reponse = requests.get(
+            urljoin(self.CAPTAIN_HOOKS_URL, '/api/me'),
+            headers={'X-GITHUB-ACCESS-TOKEN': github_token})
+
+        if 401 == login_reponse.status_code:
+            logging.critical('Could not log on Captain Hooks with the given credentials')
+            sys.exit(1)
+
+        self.jwt = login_reponse.cookies[self.COOKIE_JWT]
+        self.csrf = login_reponse.headers[self.HEADER_CSRF]
+
+    def setup_webhooks(self, organization, repository, hooks_config):
+        response = requests.post(
+            urljoin(self.CAPTAIN_HOOKS_URL, '/api/github/%s/%s/webhooks' % (organization, repository)),
+            cookies={self.COOKIE_JWT: self.jwt},
+            headers={self.HEADER_CSRF: self.csrf},
+            data=json.dumps(hooks_config))
+
+        test=True

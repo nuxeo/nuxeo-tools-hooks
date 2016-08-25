@@ -32,6 +32,7 @@ setup(
     install_requires=[
         'Flask==0.11.1',
         'Flask-Cors==2.1.3',
+        'requests==2.10.0',
         'requests-oauthlib==0.6.2',
         'PyJWT==1.4.2',
         'cryptography==1.4',
