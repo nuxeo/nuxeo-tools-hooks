@@ -68,7 +68,8 @@ class GithubServiceTest(HooksTestCase):
             Config.ENV_PREFIX + 'GITHUB_SYNC_PULLREQUESTS_ORGANIZATIONS': 'nuxeo,void'
         })
 
-        github.sync_pull_requests()
+        with self.app.test_request_context():
+            github.sync_pull_requests()
 
         self.assertEqual(1, len(StoredPullRequest.objects))
         stored_pull_request = StoredPullRequest.objects[0]  # type: StoredPullRequest
@@ -93,7 +94,8 @@ class GithubServiceTest(HooksTestCase):
         self.mocks.repository.get_pulls.return_value = pull_requests_list
         self.mocks.repository.get_pull.return_value = PullRequest(None, {}, pull_request, True)
 
-        github.sync_pull_requests()
+        with self.app.test_request_context():
+            github.sync_pull_requests()
 
         self.assertEqual(1, len(StoredPullRequest.objects))
 
@@ -161,7 +163,8 @@ class GithubServiceTest(HooksTestCase):
         self.mocks.update_hook.events = ['push']
         self.mocks.repository.get_hooks.return_value = [self.mocks.hook, self.mocks.url_hook, self.mocks.update_hook]
 
-        github.setup_webhooks('nuxeo', 'repository', setup_config)
+        with self.app.test_request_context():
+            github.setup_webhooks('nuxeo', 'repository', setup_config)
 
         self.mocks.repository.create_hook.assert_called_once_with('web', hook_config, hook_events, True)
         self.mocks.update_hook.edit.assert_called_once_with(

@@ -25,6 +25,7 @@ import gevent
 import re
 
 import json
+from flask.ctx import copy_current_request_context
 from github.GithubException import UnknownObjectException, GithubException
 from github.Hook import Hook
 from github.MainClass import Github
@@ -37,6 +38,7 @@ from nxtools.hooks.entities.db_entities import StoredPullRequest
 from nxtools.hooks.entities.github_entities import OrganizationWrapper
 from nxtools.hooks.services import AbstractService
 from nxtools.hooks.services.jira_service import JiraService
+from nxtools.hooks.services.jwt_service import JwtService
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +69,7 @@ class GithubService(AbstractService):
         :rtype: nxtools.hooks.entities.github_entities.OrganizationWrapper
         """
 
-        github = Github(self.config(GithubService.CONFIG_OAUTH_PREFIX + name))
+        github = Github(services.get(JwtService).get(JwtService.JWT_GITHUB_TOKEN))
 
         if name not in self.__organizations:
             try:
@@ -170,14 +172,14 @@ class GithubService(AbstractService):
     def list_pull_requests(self):
         pullrequests = []
 
+        @copy_current_request_context
         def append(stored_pr):
             api_pullrequest = self.get_pullrequest(stored_pr)
             if api_pullrequest is not None:
                 pullrequests.append(api_pullrequest)
 
         try:
-            gevent.joinall([gevent.spawn(append, stored_pr) for stored_pr in
-                            StoredPullRequest.objects()])
+            gevent.joinall([gevent.spawn(append, stored_pr) for stored_pr in StoredPullRequest.objects()])
         except OperationError, e:
             log.warn('list_pull_requests: Failed to fetch data from database: %s', e)
             raise Exception(e)
@@ -197,13 +199,15 @@ class GithubService(AbstractService):
             for _ in opened_pulls:
                 pulls_count += 1
 
+            @copy_current_request_context
+            def create(pr):
+                self.create_pullrequest(repository.organization, repository, pr)
+
             if pulls_count > 0:
                 log.info('Updating %s/%s pull requests: %s',
                          organization_name, repository_name, ", ".join([str(pull.number) for pull in opened_pulls]))
 
-                gevent.joinall([gevent.spawn(
-                    lambda pr: self.create_pullrequest(repository.organization, repository, pr), pullrequest)
-                                for pullrequest in opened_pulls])
+                gevent.joinall([gevent.spawn(create, pullrequest) for pullrequest in opened_pulls])
 
                 uncertain_pulls = StoredPullRequest.objects(
                     organization=organization_name,
@@ -234,9 +238,11 @@ class GithubService(AbstractService):
             try:
                 organization = self.get_organization(organization_name)  # type: Organization
 
-                gevent.joinall([gevent.spawn(
-                    lambda repo: self.sync_repository_pullrequests(repo), repository)
-                                for repository in organization.get_repos()])
+                @copy_current_request_context
+                def sync(repo):
+                    self.sync_repository_pullrequests(repo)
+
+                gevent.joinall([gevent.spawn(sync, repository) for repository in organization.get_repos()])
 
             except (HTTPException, GithubException, NoSuchOrganizationException), e:
                 log.warn('sync_pull_requests: Failed to fetch repositories of %s: %s', organization_name, e)

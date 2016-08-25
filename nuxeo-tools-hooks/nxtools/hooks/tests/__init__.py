@@ -21,6 +21,7 @@ import unittest
 
 import os
 
+import flask
 from mock.mock import Mock, patch
 from nxtools import services
 from nxtools.hooks.services.config import Config
@@ -28,6 +29,10 @@ from nxtools.hooks.services.github_service import NoSuchOrganizationException
 
 
 class HooksTestCase(unittest.TestCase):
+
+    @property
+    def app(self):
+        return flask.Flask(__name__)
 
     def setUp(self):
         super(HooksTestCase, self).setUp()

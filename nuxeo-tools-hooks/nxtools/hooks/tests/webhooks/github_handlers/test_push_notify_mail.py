@@ -358,7 +358,8 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
                 self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler.handle(body))
                 self.email_service.sendemail.assert_called_once()
 
-                email = self.handler.get_commit_email(event, event.commits[0], False)
+                with self.app.test_request_context():
+                    email = self.handler.get_commit_email(event, event.commits[0], False)
 
                 self.assertEqual(email.sender, "%s <%s>" % (event.commits[0].author.name, self.handler.sender))
                 self.assertEqual(email.reply_to, "%s <%s>" % (event.commits[0].author.name, event.commits[0].author.email))
