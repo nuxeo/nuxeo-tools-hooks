@@ -18,8 +18,6 @@ Contributors:
 """
 
 from github.PullRequest import PullRequest
-from mock.mock import patch, call, Mock
-
 from nxtools import services
 from nxtools.hooks.entities.db_entities import StoredPullRequest
 from nxtools.hooks.services.config import Config
@@ -111,11 +109,8 @@ class GithubServiceTest(HooksTestCase):
     def test_hooks_setup(self):
         github = services.get(GithubService)  # type: GithubService
 
-        hook_name = 'new_hook'
-        delete_hook_name = 'delete_hook'
-        del_urlhook_name = 'url_hook'
+        delete_hook_name = 'some_service'
         del_urlhook_url = 'http://void.null/delete'
-        update_hook_name = 'update_hook'
 
         hook_config = {
             'url': 'http://void.null/hook',
@@ -132,13 +127,14 @@ class GithubServiceTest(HooksTestCase):
         setup_config = {
             'present': [
                 {
-                    'name': hook_name,
+                    'name': 'web',
                     'config': hook_config,
                     'events': hook_events,
                     'active': True
                 },
                 {
-                    'name': update_hook_name,
+                    'id': 123456789,
+                    'name': 'web',
                     'config': update_hook_config,
                     'events': hook_events,
                     'active': True
@@ -148,17 +144,27 @@ class GithubServiceTest(HooksTestCase):
         }
 
         self.mocks.organization.get_repo.return_value = self.mocks.repository
+        self.mocks.hook.id = None
         self.mocks.hook.name = delete_hook_name
-        self.mocks.url_hook.name = del_urlhook_name
-        self.mocks.url_hook.url = del_urlhook_url
-        self.mocks.update_hook.name = update_hook_name
-        self.mocks.update_hook.url = 'http://void.null/old'
+        self.mocks.hook.config = {}
+        self.mocks.hook.active = True
+        self.mocks.hook.events = ['push']
+        self.mocks.url_hook.id = None
+        self.mocks.url_hook.name = 'web'
+        self.mocks.url_hook.config = {'url': del_urlhook_url}
+        self.mocks.url_hook.active = True
+        self.mocks.url_hook.events = ['push']
+        self.mocks.update_hook.name = 'web'
+        self.mocks.update_hook.config = {'url': 'http://void.null/old'}
+        self.mocks.update_hook.id = 123456789
+        self.mocks.update_hook.active = True
+        self.mocks.update_hook.events = ['push']
         self.mocks.repository.get_hooks.return_value = [self.mocks.hook, self.mocks.url_hook, self.mocks.update_hook]
 
         github.setup_webhooks('nuxeo', 'repository', setup_config)
 
-        self.mocks.repository.create_hook.assert_called_once_with(hook_name, hook_config, hook_events, True)
+        self.mocks.repository.create_hook.assert_called_once_with('web', hook_config, hook_events, True)
         self.mocks.update_hook.edit.assert_called_once_with(
-            update_hook_name, update_hook_config, hook_events, active=True)
+            'web', update_hook_config, hook_events, active=True)
         self.assertTrue(self.mocks.hook.delete.called)
         self.assertTrue(self.mocks.url_hook.delete.called)

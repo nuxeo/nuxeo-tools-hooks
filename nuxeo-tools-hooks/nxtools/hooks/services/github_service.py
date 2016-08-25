@@ -24,7 +24,9 @@ import logging
 import gevent
 import re
 
+import json
 from github.GithubException import UnknownObjectException, GithubException
+from github.Hook import Hook
 from github.MainClass import Github
 from github.Organization import Organization
 from github.Repository import Repository
@@ -239,24 +241,56 @@ class GithubService(AbstractService):
             except (HTTPException, GithubException, NoSuchOrganizationException), e:
                 log.warn('sync_pull_requests: Failed to fetch repositories of %s: %s', organization_name, e)
 
+    def json_encode_hook(self, hook):
+        return json.dumps({
+            'id': hook.id,
+            'name': hook.name,
+            'config': hook.config,
+            'events': hook.events,
+            'active': hook.active
+
+        })
+
+    def update_webhook(self, hook, hooks_config):
+        for h in hooks_config:
+            if 'id' in h and h['id'] == hook.id:
+                log.debug('Updating %s: %s => %s', hook.url, self.json_encode_hook(hook), h)
+                hook.edit(h['name'], h['config'], h['events'], active=h['active'])
+                return h
+            if 'config' in h:
+                if 'url' in h['config'] and h['config']['url'] == hook.config['url']:
+                    log.debug('Updating %s: %s => %s', hook.url, self.json_encode_hook(hook), h)
+                    hook.edit(h['name'], h['config'], hook.events + [e for e in h['events'] if e not in hook.events],
+                              active=h['active'])
+                    return h
+        return None
+
     def setup_webhooks(self, organization_name, repository_name, hooks_config):
         try:
             organization = self.get_organization(organization_name)  # type: Organization
             repository = organization.get_repo(repository_name)  # type: Repository
-            hooks = repository.get_hooks()
+            hooks = list(repository.get_hooks())
 
             if 'absent' in hooks_config:
-                for hook in list(hooks):
-                    if hook.name in hooks_config['absent'] or hook.url in [h['url'] for h in hooks_config['absent']
-                                                                           if type(h) is dict and 'url' in h]:
+                for hook in list(hooks):  # type: Hook
+                    if hook.name in hooks_config['absent'] \
+                            or hook.config['url'] in [h['url'] for h in hooks_config['absent']
+                                                      if type(h) is dict and 'url' in h]:
+
+                        log.debug('Deleting %s: %s', hook.url, self.json_encode_hook(hook))
                         hook.delete()
                         hooks.remove(hook)
             if 'present' in hooks_config:
+                todo_config = hooks_config['present']
+
                 for hook in hooks:
-                    [hook.edit(h['name'], h['config'], h['events'], active=h['active'])
-                     for h in hooks_config['present'] if h['name'] == hook.name]
-                [repository.create_hook(h['name'], h['config'], h['events'], h['active'])
-                 for h in hooks_config['present'] if h['name'] not in [hook.name for hook in hooks]]
+                    updated = self.update_webhook(hook, todo_config)
+                    if updated is not None:
+                        todo_config.remove(updated)
+
+                for h in todo_config:
+                    log.debug('Creating %s', h)
+                    repository.create_hook(h['name'], h['config'], h['events'], h['active'])
 
         except (HTTPException, GithubException, NoSuchOrganizationException), e:
             log.warn('setup_webhooks: Failed setup webhooks of %s/%s: %s', organization_name, repository_name, e)
