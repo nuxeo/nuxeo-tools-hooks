@@ -105,11 +105,8 @@ class ApiEndpoint(AbstractEndpoint, BootableService):
     def setup_webhooks(organisation, repository):
         try:
             data = json.loads(request.data)
-            if 'config' in data:
-                services.get(GithubService).setup_webhooks(organisation, repository, data['config'])
-                return 'OK', 200
-            else:
-                return 'KO', 400
+            services.get(GithubService).setup_webhooks(organisation, repository, data)
+            return 'OK', 200
         except Exception, e:
             log.warn('setup_webhooks: Could not setup %s/%s webhooks: %s', organisation, repository, e)
             return 'KO', 500
