@@ -23,6 +23,7 @@ import sys
 
 from github.MainClass import Github
 from github.Organization import Organization
+from github.Repository import Repository
 from nxtools.hooks.client import CaptainHooksClient
 
 """
@@ -35,10 +36,9 @@ logging.basicConfig(level=logging.INFO)
 class GithubWebHooksAllRepos:
 
     GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
-    ORGANIZATION = 'nuxeo'
+    ORGANIZATION = 'nuxeo-sandbox'
 
     def __init__(self):
-        self.client = CaptainHooksClient()
         pass
 
     def run(self):
@@ -47,11 +47,30 @@ class GithubWebHooksAllRepos:
             sys.exit(1)
 
         github = Github(self.GITHUB_TOKEN)
+        captain_hooks = CaptainHooksClient(self.GITHUB_TOKEN)
+
         logging.info('Fetching organization %s', self.ORGANIZATION)
         orga = github.get_organization(self.ORGANIZATION)  # type: Organization
         logging.info('Fetching organization repositories')
-        for repo in orga.get_repos():
-            pass
+        for repo in [orga.get_repo('nuxeo-pullrequest')]:  # type: Repository
+            captain_hooks.setup_webhooks(orga.login, repo.name, {
+                'absent': [
+                    {'url': 'http://qapreprod.in.nuxeo.com/jenkins/github-webhook/'},
+                    {'url': 'https://qa.nuxeo.org/githooks/send-email'},
+                    {'url': 'https://app.review.ninja/github/webhook'},
+                ],
+                'present': [
+                    {
+                        'name': 'web',
+                        'config': {
+                            'content_type': 'json',
+                            'url': 'https://hooks.nuxeo.org/hook/'
+                        },
+                        'events': ['push'],
+                        'active': True
+                    },
+                ]
+            })
 
 if __name__ == '__main__':
     GithubWebHooksAllRepos().run()
