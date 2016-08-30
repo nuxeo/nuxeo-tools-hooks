@@ -258,7 +258,7 @@ class GithubService(AbstractService):
                 hook.edit(h['name'], h['config'], h['events'], active=h['active'])
                 return h
             if 'config' in h:
-                if 'url' in h['config'] and h['config']['url'] == hook.config['url']:
+                if 'url' in h['config'] and 'url' in hook.config and h['config']['url'] == hook.config['url']:
                     log.debug('Updating %s: %s => %s', hook.url, self.json_encode_hook(hook), h)
                     hook.edit(h['name'], h['config'], hook.events + [e for e in h['events'] if e not in hook.events],
                               active=h['active'])
