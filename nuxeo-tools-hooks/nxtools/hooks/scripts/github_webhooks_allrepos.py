@@ -21,10 +21,12 @@ import os
 import logging
 import sys
 
+import json
+from github.Hook import Hook
 from github.MainClass import Github
 from github.Organization import Organization
 from github.Repository import Repository
-from nxtools.hooks.client import CaptainHooksClient
+from nxtools.hooks.client import CaptainHooksClient, CaptainHooksClientException
 
 """
 This scripts is used to setup webhooks on all Nuxeo Github repositories
@@ -52,25 +54,32 @@ class GithubWebHooksAllRepos:
         logging.info('Fetching organization %s', self.ORGANIZATION)
         orga = github.get_organization(self.ORGANIZATION)  # type: Organization
         logging.info('Fetching organization repositories')
-        for repo in [orga.get_repo('nuxeo-pullrequest')]:  # type: Repository
-            captain_hooks.setup_webhooks(orga.login, repo.name, {
-                'absent': [
-                    {'url': 'http://qapreprod.in.nuxeo.com/jenkins/github-webhook/'},
-                    {'url': 'https://qa.nuxeo.org/githooks/send-email'},
-                    {'url': 'https://app.review.ninja/github/webhook'},
-                ],
-                'present': [
-                    {
-                        'name': 'web',
-                        'config': {
-                            'content_type': 'json',
-                            'url': 'https://hooks.nuxeo.org/hook/'
+        for repo in orga.get_repos():  # type: Repository
+            for hook in repo.get_hooks():  # type: Hook
+                logging.info('%s/%s:backup: ' + json.dumps(hook.raw_data), orga.login, repo.name)
+            logging.info('%s/%s:updating', orga.login, repo.name)
+            try:
+                captain_hooks.setup_webhooks(orga.login, repo.name, {
+                    'absent': [
+                        {'url': 'http://qapreprod.in.nuxeo.com/jenkins/github-webhook/'},
+                        {'url': 'https://qa.nuxeo.org/githooks/send-email'},
+                        # {'url': 'https://app.review.ninja/github/webhook'},
+                    ],
+                    'present': [
+                        {
+                            'name': 'web',
+                            'config': {
+                                'content_type': 'json',
+                                'url': 'https://hooks.nuxeo.org/hook/'
+                            },
+                            'events': ['push'],
+                            'active': True
                         },
-                        'events': ['push'],
-                        'active': True
-                    },
-                ]
-            })
+                    ]
+                })
+                logging.info('%s/%s:done', orga.login, repo.name)
+            except CaptainHooksClientException, e:
+                logging.warn('%s/%s:failed: %s', orga.login, repo.name, e)
 
 if __name__ == '__main__':
     GithubWebHooksAllRepos().run()

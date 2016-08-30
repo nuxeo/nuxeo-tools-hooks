@@ -30,6 +30,10 @@ from urlparse import urljoin
 logging.basicConfig(level=logging.INFO)
 
 
+class CaptainHooksClientException(Exception):
+    pass
+
+
 class CaptainHooksClient:
 
     CAPTAIN_HOOKS_URL = os.getenv('CAPTAIN_HOOKS_URL', 'http://localhost:5000')
@@ -55,4 +59,9 @@ class CaptainHooksClient:
             headers={self.HEADER_CSRF: self.csrf},
             data=json.dumps(hooks_config))
 
-        test=True
+        if response.status_code > 400:
+            raise CaptainHooksClientException('Fail to setup webhooks for %s/%s: %d-%s',
+                                              organization,
+                                              repository,
+                                              response.status_code,
+                                              response.text)
