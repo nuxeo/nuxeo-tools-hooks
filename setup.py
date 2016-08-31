@@ -28,7 +28,7 @@ setup(
     keywords='nuxeo',
     packages=find_packages("nuxeo-tools-hooks"),
     package_dir={"nxtools": "nuxeo-tools-hooks/nxtools"},
-    package_data={"nxtools.hooks": find_files(["doc/*", "**/resources/*"])},
+    package_data={"nxtools.hooks": find_files(["doc/*", "scripts/*", "**/resources/*"])},
     install_requires=[
         'Flask==0.11.1',
         'Flask-Cors==2.1.3',
