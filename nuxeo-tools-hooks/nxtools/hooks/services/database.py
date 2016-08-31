@@ -40,7 +40,7 @@ class DatabaseService(BootableService):
     def boot(self, app):
         """ :type app: nxtools.hooks.app.ToolsHooksApp """
 
-        log.info(' * Connecting to database backend: ' + self.db_url)
+        log.info('Connecting to database backend: ' + self.db_url)
 
         self.connect()
 

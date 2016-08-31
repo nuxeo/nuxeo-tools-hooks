@@ -74,7 +74,7 @@ class WebHookEndpoint(AbstractEndpoint, BootableService):
 
         for loader, module_name, _ in pkgutil.iter_modules(__path__, __name__ + "."):
             if module_name.endswith("_hook") and module_name not in loaded:
-                log.debug(' * Loading module: ' + module_name)
+                log.debug('Loading module: ' + module_name)
                 loader.find_module(module_name).load_module(module_name)
 
     def do_route(self):
