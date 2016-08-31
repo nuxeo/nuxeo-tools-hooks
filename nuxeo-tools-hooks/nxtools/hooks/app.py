@@ -21,6 +21,7 @@ Contributors:
 import logging
 import os
 
+import sys
 from flask.app import Flask
 from logging import FileHandler
 from logging.config import fileConfig
@@ -78,7 +79,7 @@ class ToolsHooksApp(object):
 
         logging_config_file = self.config.get(DEFAULTSECT, "logging_config_file")
         if logging_config_file:
-            fileConfig(logging_config_file)
+            fileConfig(logging_config_file, disable_existing_loggers=False)
 
         if self.config.get(DEFAULTSECT, "debug", False):
             keys = request_environ.keys()
