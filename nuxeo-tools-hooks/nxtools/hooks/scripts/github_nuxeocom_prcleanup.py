@@ -63,7 +63,7 @@ class GithubNuxeocomPRCleanup:
 
         orga = github.get_organization('nuxeo')  # type: Organization
         repo = orga.get_repo('nuxeo.com')  # type: Repository
-        opened_pulls = ['/var/www/nuxeo.com/pr-%d.' + self.PREVIEW_DOMAIN % pull.number for pull in repo.get_pulls()]
+        opened_pulls = [('/var/www/nuxeo.com/pr-%d.' % pull.number) + self.PREVIEW_DOMAIN for pull in repo.get_pulls()]
 
         try:
             ssh.connect('www', username='root', key_filename=self.SSH_PKEY)
