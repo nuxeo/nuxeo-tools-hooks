@@ -66,8 +66,7 @@ class GithubNuxeocomPRCleanup:
         opened_pulls = ['/var/www/nuxeo.com/pr-%d.' + self.PREVIEW_DOMAIN % pull.number for pull in repo.get_pulls()]
 
         try:
-            proxy = ProxyCommand('ssh -i %s -W 10.10.0.63:22 ' + self.BASTION_IP % self.SSH_PKEY)
-            ssh.connect('10.10.0.63', sock=proxy, key_filename=self.SSH_PKEY)
+            ssh.connect('www', username='root', key_filename=self.SSH_PKEY)
             _, stdout, _ = ssh.exec_command('ls -d /var/www/nuxeo.com/pr-*')
             [ssh.exec_command('rm -rf ' + line.strip()) for line in stdout.readlines() if line.strip() not in opened_pulls]
             ssh.close()
