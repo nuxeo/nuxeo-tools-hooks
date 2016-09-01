@@ -42,6 +42,7 @@ setup(
         'Unidecode==0.4.19',
         'mongoengine==0.10.6',
         'gevent==1.1.2',
-        'geventhttpclient==1.3.1'
+        'geventhttpclient==1.3.1',
+        'paramiko==1.17'
     ]
 )
