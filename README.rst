@@ -1,6 +1,6 @@
-================================
+========================
 Nuxeo Tools Captain Hook
-================================
+========================
 
 .. image:: https://qa.nuxeo.org/jenkins/buildStatus/icon?job=Misc/nuxeo-tools-hooks
          :target: https://qa.nuxeo.org/jenkins/job/Misc/job/nuxeo-tools-hooks/
@@ -16,12 +16,14 @@ Installation
 
 - Clone project
 - (Optional) Create a Python virtalenv
-- Install requirements with pip install -r requirements.txt
+- Install requirements with pip install -r dev-requirements.txt
 - Add nuxeo-tools-hooks to your PYTHONPATH
 - Run with python nuxeo-tools-hooks/nxtools/hooks/app.py
 
 Usage
 =====
+
+Please read https://wiki.nuxeo.com/display/NIG/Captain+Hooks
 
 ********
 Features

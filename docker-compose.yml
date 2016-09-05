@@ -8,12 +8,10 @@ services:
     image: mongo:latest
     volumes:
       - data:/data
-  api:
-    build: ./docker
+  node:
+    build: .
+    command: python -m nxtools.hooks.app
     volumes:
-      - ./docker/entrypoint.sh:/entrypoint.sh
-      - ./nuxeo-tools-hooks/nxtools/hooks/doc/vhost.conf:/etc/apache2/sites-enabled/vhost.conf
-      - ./requirements.txt:/opt/requirements.txt
       - ./dist:/opt/dist
       - ./conf:/opt/conf
       - data:/opt/data
@@ -21,4 +19,11 @@ services:
       - mongo
     environment:
       - NXTOOLS_HOOKS_CONF=/opt/conf/nuxeo-tools-hooks.ini
+      - NXTOOLS_HOOKS_LOGGING_CONFIG_FILE=/opt/conf/log.ini
       - NXTOOLS_HOOKS_DATABASE_CONNECTION_URL=mongodb://mongo/nxtools-hooks
+  proxy:
+    image: nginx:stable
+    links:
+    - node:captainhook-node
+    volumes:
+      - ./docker/nginx-proxy/custom.conf:/etc/nginx/conf.d/10-custom.conf

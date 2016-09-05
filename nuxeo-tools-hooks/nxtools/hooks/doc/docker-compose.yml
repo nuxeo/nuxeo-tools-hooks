@@ -1,0 +1,25 @@
+version: '2'
+
+services:
+  mongo:
+    image: mongo:latest
+    volumes:
+      - /opt/hooks/data:/data/db:rw
+  node:
+    image: dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:feature-NXBT-1140-activate-all-repos
+    command: python -m nxtools.hooks.app
+    volumes:
+      - /opt/hooks/conf:/opt/conf
+      - /opt/hooks/logs:/opt/logs
+    links:
+      - mongo
+    environment:
+      - NXTOOLS_HOOKS_CONF=/opt/conf/nuxeo-tools-hooks.ini
+  proxy:
+    image: nginx:stable
+    links:
+      - node:captainhook-node
+    volumes:
+      - /opt/hooks/conf/nginx-custom.conf:/etc/nginx/conf.d/10-custom.conf
+    ports:
+      - "8888:80"
