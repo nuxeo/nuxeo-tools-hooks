@@ -1,0 +1,16 @@
+[Unit]
+Description=Nuxeo Captain Hooks
+After=docker.service
+Requires=docker.service
+
+[Service]
+Environment=COMPOSE_FILE=/opt/hooks/docker-compose.yml
+Environment=COMPOSE_BIN=/opt/docker-compose-venv/bin/docker-compose
+TimeoutStartSec=0
+TimeoutStopSec=30
+Restart=always
+RestartSec=10
+ExecStartPre=-/opt/docker-compose-venv/bin/docker-compose -f $COMPOSE_FILE kill
+ExecStartPre=-/opt/docker-compose-venv/bin/docker-compose -f $COMPOSE_FILE rm -f
+ExecStart=/opt/docker-compose-venv/bin/docker-compose -f $COMPOSE_FILE up --force-recreate
+ExecStop=/opt/docker-compose-venv/bin/docker-compose -f $COMPOSE_FILE stop
