@@ -26,10 +26,6 @@ import sys
 
 from urlparse import urljoin
 
-
-logging.basicConfig(level=logging.INFO)
-
-
 class CaptainHooksClientException(Exception):
     pass
 

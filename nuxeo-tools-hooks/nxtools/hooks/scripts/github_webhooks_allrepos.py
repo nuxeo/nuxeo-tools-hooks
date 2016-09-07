@@ -32,13 +32,13 @@ from nxtools.hooks.client import CaptainHooksClient, CaptainHooksClientException
 This scripts is used to setup webhooks on all Nuxeo Github repositories
 """
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, filename='logs/GithubWebHooksAllRepos.log')
 
 
 class GithubWebHooksAllRepos:
 
     GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
-    ORGANIZATION = 'nuxeo-sandbox'
+    ORGANIZATION = 'nuxeo'
 
     def __init__(self):
         pass

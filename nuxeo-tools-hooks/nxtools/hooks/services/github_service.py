@@ -274,8 +274,8 @@ class GithubService(AbstractService):
             if 'absent' in hooks_config:
                 for hook in list(hooks):  # type: Hook
                     if hook.name in hooks_config['absent'] \
-                            or hook.config['url'] in [h['url'] for h in hooks_config['absent']
-                                                      if type(h) is dict and 'url' in h]:
+                            or 'url' in hook.config and hook.config['url'] in [h['url'] for h in hooks_config['absent']
+                                                                               if type(h) is dict and 'url' in h]:
 
                         log.debug('Deleting %s: %s', hook.url, self.json_encode_hook(hook))
                         hook.delete()
