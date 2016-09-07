@@ -213,7 +213,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
             diff = "Could not read diff - see %s.diff for raw diff" % commit.url
             diff += "\n(Error: %s)\n" % (str(e))
 
-        subject = u"%s: %s (branch@%s)" % (event.repository.name, commit.message, self.get_branch_short_name(event))
+        subject = u"%s: %s (branch@%s)" % (event.repository.name, commit.message.splitlines()[0], self.get_branch_short_name(event))
 
         if with_warn:
             subject = "[WARN] " + subject
