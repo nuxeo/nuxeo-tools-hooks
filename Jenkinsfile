@@ -59,6 +59,15 @@ python setup.py sdist'''
         step([$class: 'ArtifactArchiver', allowEmptyArchive: true, artifacts: 'dist/*.tar.gz', excludes: null, fingerprint: true, onlyIfSuccessful: true])
         step([$class: 'JiraIssueUpdater', issueSelector: [$class: 'DefaultIssueSelector'], scm: scm])
         step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'ci/qa.nuxeo.com'], statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: 'Building on Nuxeo CI', state: 'SUCCESS']]]])
+
+        if('master' == env.BRANCH_NAME) {
+            build job: '/Private/System/deploy-hooks.nuxeo.org', parameters: [
+                    [$class: 'StringParameterValue', name: 'DASHBOARD_PACKAGE', value: 'https://qa.nuxeo.org/jenkins/job/Misc/job/nuxeo-tools-qa-dashboard/lastSuccessfulBuild/artifact/nuxeo-tools-qa-dashboard.zip'],
+                    [$class: 'StringParameterValue', name: 'TOOLS_BRANCH', value: 'master'],
+                    [$class: 'StringParameterValue', name: 'ANSIBLE_PRIV_BRANCH', value: '$TOOLS_BRANCH']
+            ], wait: false
+        }
+
         slackSend channel: '#devops-notifs', color: 'good', message: "${env.JOB_NAME} - #${env.BUILD_NUMBER} Success (<${env.BUILD_URL}|Open>)"
     } catch (e) {
         step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'ci/qa.nuxeo.com'], statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: 'Building on Nuxeo CI', state: 'FAILURE']]]])
