@@ -16,14 +16,19 @@ limitations under the License.
 Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
 """
-
+from github import MainClass
+from github.Commit import Commit as BaseCommit
 from github.CommitStatus import CommitStatus as BaseCommitStatus
+from github.GitCommit import GitCommit
 from github.GithubObject import NotSet, NonCompletableGithubObject
+from github.Issue import Issue
+from github.IssueComment import IssueComment
 from github.NamedUser import NamedUser
 from github.Organization import Organization
 from github.PaginatedList import PaginatedList
 from github.PullRequest import PullRequest
 from github.Repository import Repository
+from github.Requester import Requester
 
 
 class PushEvent(NonCompletableGithubObject):
@@ -71,7 +76,7 @@ class PushEvent(NonCompletableGithubObject):
     @property
     def head_commit(self):
         """
-        :rtype: nxtools.hooks.entities.github_entities.Commit
+        :rtype: nxtools.hooks.entities.github_entities.PushEventCommit
         """
         return self._head_commit.value
 
@@ -137,9 +142,9 @@ class PushEvent(NonCompletableGithubObject):
         if "compare" in attributes:
             self._compare = self._makeStringAttribute(attributes["compare"])
         if "commits" in attributes:
-            self._commits = self._makeListOfClassesAttribute(Commit, attributes["commits"])
+            self._commits = self._makeListOfClassesAttribute(PushEventCommit, attributes["commits"])
         if "head_commit" in attributes:
-            self._head_commit = self._makeClassAttribute(Commit, attributes["head_commit"])
+            self._head_commit = self._makeClassAttribute(PushEventCommit, attributes["head_commit"])
         if "repository" in attributes:
             self._repository = self._makeClassAttribute(Repository, attributes["repository"])
         if "pusher" in attributes:
@@ -211,7 +216,71 @@ class PullRequestEvent(NonCompletableGithubObject):
             self._sender = self._makeClassAttribute(NamedUser, attributes["sender"])
 
 
-class Commit(NonCompletableGithubObject):
+class IssueCommentEvent(NonCompletableGithubObject):
+
+    @property
+    def action(self):
+        return self._action.value
+
+    @property
+    def issue(self):
+        """
+        :rtype: github.Issue.Issue
+        """
+        return self._issue.value
+
+    @property
+    def comment(self):
+        """
+        :rtype: github.IssueComment.IssueComment
+        """
+        return self._comment.value
+
+    @property
+    def repository(self):
+        """
+        :rtype: github.Repository.Repository
+        """
+        return self._repository.value
+
+    @property
+    def organization(self):
+        """
+        :rtype: github.Organization.Organization
+        """
+        return self._organization.value
+
+    @property
+    def sender(self):
+        """
+        :rtype: github.NamedUser.NamedUser
+        """
+        return self._sender.value
+
+    def _initAttributes(self):
+        self._action = NotSet
+        self._issue = NotSet
+        self._comment = NotSet
+        self._repository = NotSet
+        self._organization = NotSet
+        self._sender = NotSet
+
+    def _useAttributes(self, attributes):
+        if "action" in attributes:
+            self._action = self._makeStringAttribute(attributes["action"])
+        if "issue" in attributes:
+            self._issue = self._makeClassAttribute(Issue, attributes["issue"])
+        if "comment" in attributes:
+            self._comment = self._makeClassAttribute(IssueComment, attributes["comment"])
+        if "repository" in attributes:
+            self._repository = self._makeClassAttribute(Repository, attributes["repository"])
+        if "organization" in attributes:
+            self._organization = self._makeClassAttribute(Organization, attributes["organization"])
+        if "sender" in attributes:
+            self._sender = self._makeClassAttribute(NamedUser, attributes["sender"])
+
+
+class PushEventCommit(NonCompletableGithubObject):
 
     @property
     def id(self):
@@ -284,9 +353,9 @@ class Commit(NonCompletableGithubObject):
         if "url" in attributes:
             self._url = self._makeStringAttribute(attributes["url"])
         if "author" in attributes:
-            self._author = self._makeClassAttribute(Author, attributes["author"])
+            self._author = self._makeClassAttribute(PushEventCommitAuthor, attributes["author"])
         if "committer" in attributes:
-            self._committer = self._makeClassAttribute(Author, attributes["committer"])
+            self._committer = self._makeClassAttribute(PushEventCommitAuthor, attributes["committer"])
         if "added" in attributes:
             self._added = self._makeListOfStringsAttribute(attributes["added"])
         if "removed" in attributes:
@@ -316,10 +385,10 @@ class User(NonCompletableGithubObject):
             self._email = self._makeStringAttribute(attributes["email"])
 
 
-class Author(User):
+class PushEventCommitAuthor(User):
 
     @property
-    def c(self):
+    def username(self):
         return self._username.value
 
     def _initAttributes(self):
@@ -369,6 +438,34 @@ class RepositoryWrapper(GithubEntityWrapper):
         assert isinstance(sha, (str, unicode)), sha
 
         return CommitWrapper(self._wrappee.get_commit(sha))
+
+    def get_blame(self, file_path, branch='master'):
+        assert isinstance(file_path, (str, unicode)), file_path
+
+        requester = Requester(
+            None,
+            None,
+            "https://github.com",
+            MainClass.DEFAULT_TIMEOUT,
+            None,
+            None,
+            self._requester._Requester__userAgent,
+            MainClass.DEFAULT_PER_PAGE,
+            False
+        )
+
+        status, headers, body = \
+            requester._Requester__requestRaw(None,
+                                             'GET',
+                                             '%s/blame/%s/%s' % (self.html_url, branch, file_path),
+                                             {
+                                                 'User-Agent': requester._Requester__userAgent
+                                             }, None)
+
+        if status >= 400:
+            raise requester._Requester__createException(status, headers, body)
+
+        return body
 
 
 class CommitWrapper(GithubEntityWrapper):
