@@ -1,0 +1,282 @@
+"""
+(C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+you may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Contributors:
+    Pierre-Gildas MILLON <pgmillon@nuxeo.com>
+"""
+
+import logging
+import operator
+import re
+
+from github.Commit import Commit
+from github.File import File
+from github.IssueComment import IssueComment
+from github.PullRequest import PullRequest
+from nxtools import ServiceContainer, services
+from nxtools.hooks.endpoints.webhook.github_hook import AbstractGithubHandler, GithubHook
+from nxtools.hooks.entities.github_entities import PullRequestEvent, RepositoryWrapper, IssueCommentEvent
+from nxtools.hooks.services import AbstractService
+from nxtools.hooks.services.github_service import GithubService
+from slackclient import SlackClient
+
+log = logging.getLogger(__name__)
+
+
+@ServiceContainer.service
+class GithubReviewService(AbstractService):
+
+    pending_status = "pending"
+
+    success_status = "success"
+
+    def parse_patch(self, patch):
+        deleted_lines = []
+        current_from_line = 0
+
+        for line in patch.splitlines():
+            if line.startswith('@@'):
+                matches = re.match(r"@@ -([0-9]+),?([0-9]+)? \+([0-9]+),?([0-9]+)? @@", line)
+                if matches is not None:
+                    from_line = int(matches.group(1))
+                    # from_count = int(matches.group(2))
+                    # to_line = int(matches.group(3))
+                    # to_count = int(matches.group(4))
+
+                    current_from_line = from_line
+                continue
+            if line.startswith('-'):
+                deleted_lines.append(current_from_line)
+            if not line.startswith('+'):
+                current_from_line += 1
+
+        return deleted_lines
+
+    def parse_blame(self, blame):
+        currentAuthor = 'none'
+        lines = []
+
+        for match in re.findall(r"(rel=\"(?:author|contributor)\">([^<]+)</a> authored|<tr class=\"blame-line\">)",
+                                blame, re.M):
+            if match[1]:
+                currentAuthor = match[1]
+            else:
+                lines.append(currentAuthor)
+
+        return lines
+
+    def get_owners(self, event):
+        files = []
+        deletion_owners = {}
+        all_owners = {}
+
+        repository = services.get(GithubService).get_organization(event.organization.login). \
+            get_repo(event.repository.name)  # type: RepositoryWrapper
+
+        pull_request = repository.get_pull(event.pull_request.number)  # type: PullRequest
+        pr_id = '%s/%s/pull/%d' % (event.organization.login, repository.name, pull_request.id)
+
+        log.info('%s: Checking reviewers', pr_id)
+
+        log.debug('%s: Getting & Parsing patch for each files of PR', pr_id)
+        for pr_file in pull_request.get_files():  # type: File
+            if 'modified' == pr_file.status:  # todo: remove binary files
+                files.append({'file': pr_file.filename, 'deletions': self.parse_patch(pr_file.patch)})
+
+        files.sort(key=lambda f: len(f['deletions']), reverse=True)
+        files = files[:self.number_checked_files]
+
+        for f in files:
+            log.debug('%s: %s - %d deletions, getting & parsing blame', pr_id, f['file'], len(f['deletions']))
+            blame = self.parse_blame(repository.get_blame(f['file'], event.pull_request.base.sha))
+
+            for name in blame:
+                all_owners[name] = all_owners[name] + 1 if name in all_owners else 1
+
+            for line in f['deletions']:
+                name = blame[line - 1]
+                if name:
+                    deletion_owners[name] = deletion_owners[name] + 1 if name in deletion_owners else 1
+
+        log.debug('%s: deleted_owners: %s', pr_id, deletion_owners)
+        log.debug('%s: all_owners: %s', pr_id, all_owners)
+
+        for owner in deletion_owners:
+            if owner in all_owners:
+                del all_owners[owner]
+
+        owners = [owner for owner, count in
+                  sorted(deletion_owners.items(), key=operator.itemgetter(1), reverse=True)[:1] +
+                  sorted(all_owners.items(), key=operator.itemgetter(1), reverse=True)
+                  if owner != 'none' and owner != event.pull_request.user.login]
+
+        return owners[:self.number_reviewers]
+
+    def count_reviews(self, pull_request, last_commit):
+        """
+         :type pull_request: PullRequest
+         :type last_commit: Commit
+         """
+        reviews = 0
+        for comment in pull_request.get_issue_comments():  # type: IssueComment
+            if comment.created_at > last_commit.commit.author.date and \
+                            comment.body.strip() == self.mark_reviewed_comment:
+                reviews += 1
+
+        return reviews
+
+    def set_review_status(self, pull_request, last_commit):
+        """
+         :type pull_request: PullRequest
+         :type last_commit: Commit
+         """
+        reviews_count = self.count_reviews(pull_request, last_commit)
+
+        status = self.success_status if reviews_count >= self.required_reviews else self.pending_status
+
+        last_commit.create_status(
+            status,
+            description='%d (of %d) reviews' % (reviews_count, self.required_reviews),
+            context=self.review_context)
+
+    def slack_notify(self, event, owners):
+        reviewers = ", ".join(["@" + o for o in owners])
+        slack = SlackClient(self.slack_token)
+        slack.api_call('chat.postMessage',
+                       channel=self.slack_channel,
+                       username=self.slack_username,
+                       icon_emoji=self.slack_icon,
+                       unfurl_links=False,
+                       attachments=[
+                           {
+                               "fallback": "%s (%s) has created %s/%s PR #%d: %s. Potential reviewers: %s" % (
+                                   event.pull_request.user.login,
+                                   event.pull_request.user.html_url,
+                                   event.organization.login,
+                                   event.repository.name,
+                                   event.pull_request.number,
+                                   event.pull_request.title,
+                                   reviewers
+                               ),
+                               "color": "good",
+                               "author_name": event.pull_request.user.login,
+                               "author_link": event.pull_request.user.html_url,
+                               "title": "%s/%s PR #%d: %s" % (
+                                   event.organization.login,
+                                   event.repository.name,
+                                   event.pull_request.number,
+                                   event.pull_request.title),
+                               "title_link": event.pull_request.html_url,
+                               "text": "Needs 2 review to merge. Potential reviewers: " + reviewers
+                           }
+                       ])
+
+    def github_comment(self, event, owners):
+        reviewers = ", ".join(["@" + o for o in owners])
+
+        repository = services.get(GithubService).get_organization(event.organization.login). \
+            get_repo(event.repository.name)  # type: RepositoryWrapper
+
+        pull_request = repository.get_pull(event.pull_request.number)  # type: PullRequest
+        pull_request.create_issue_comment("From the blame information on this pull request, potential reviewers: "
+                                          + reviewers)
+
+    @property
+    def activate(self):
+        return self.config('active', False)
+
+    @property
+    def slack_icon(self):
+        return self.config('slack_icon', ':nuxeo:')
+
+    @property
+    def slack_username(self):
+        return self.config('slack_username', 'nuxeo_review')
+
+    @property
+    def slack_channel(self):
+        return self.config('slack_channel', '#pull-requests')
+
+    @property
+    def slack_token(self):
+        return self.config('slack_token', '')
+
+    @property
+    def number_checked_files(self):
+        return self.config('number_checked_files', 5)
+
+    @property
+    def number_reviewers(self):
+        return self.config('number_reviewers', 3)
+
+    @property
+    def mark_reviewed_comment(self):
+        return self.config('mark_reviewed_comment', ':+1:')
+
+    @property
+    def required_reviews(self):
+        return self.config('required_reviews', 2)
+
+    @property
+    def review_context(self):
+        return self.config('review_context', 'code-review/nuxeo')
+
+
+@ServiceContainer.service
+class GithubReviewNotifyHandler(AbstractGithubHandler):
+
+    def can_handle(self, headers, body):
+        return "pull_request" == headers[GithubHook.payloadHeader]
+
+    def handle(self, payload_body):
+        event = PullRequestEvent(None, None, payload_body, True)
+        review_service = services.get(GithubReviewService)  # type: GithubReviewService
+
+        if review_service.activate and event.repository.private is False:
+            last_commit = event.pull_request.get_commits().reversed[0]  # type: Commit
+
+            if event.action in ['created', 'synchronize']:
+                review_service.set_review_status(event.pull_request, last_commit)
+
+            if event.action == 'created':
+                owners = review_service.get_owners(event)
+                review_service.slack_notify(event, owners)
+                review_service.github_comment(event, owners)
+
+        return 200, 'OK'
+
+
+@ServiceContainer.service
+class GithubReviewCommentHandler(AbstractGithubHandler):
+
+    def can_handle(self, headers, body):
+        return "issue_comment" == headers[GithubHook.payloadHeader]
+
+    def handle(self, payload_body):
+        event = IssueCommentEvent(None, None, payload_body, True)
+        review_service = services.get(GithubReviewService)  # type: GithubReviewService
+
+        if review_service.activate and event.repository.private is False:
+            if event.comment.body.strip() == review_service.mark_reviewed_comment or \
+                    ('changes' in event.raw_data
+                        and event.raw_data['changes']['body']['from'].strip() == review_service.mark_reviewed_comment):
+                repository = services.get(GithubService).get_organization(event.organization.login)\
+                    .get_repo(event.repository.name)
+                pr = repository.get_pull(event.issue.number)  # type: PullRequest
+                last_commit = pr.get_commits().reversed[0]  # type: Commit
+
+                review_service.set_review_status(pr, last_commit)
+
+        return 200, 'OK'

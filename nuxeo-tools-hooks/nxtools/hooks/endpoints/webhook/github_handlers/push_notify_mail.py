@@ -185,7 +185,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
     def get_commit_email(self, event, commit, with_warn):
         """
         :type event: nxtools.hooks.entities.github_entities.PushEvent
-        :type commit: nxtools.hooks.entities.github_entities.Commit
+        :type commit: nxtools.hooks.entities.github_entities.PushEventCommit
         :rtype: nxtools.hooks.entities.mail.Email
         """
         template = self._jinja.get_template(self.email_template)
