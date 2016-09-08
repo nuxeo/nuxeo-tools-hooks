@@ -21,41 +21,40 @@
 node('SLAVE') {
     try {
         stage 'prepare'
-        sh '''#!/bin/bash
-rm -rf venv
-virtualenv venv
+        step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'ci/qa.nuxeo.com'], statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: 'Building on Nuxeo CI', state: 'PENDING']]]])
 
-source venv/bin/activate
-'''
-        stage 'build'
         checkout scm
         sh "git rev-parse --short HEAD > .git/commit-id"
         commit_id = readFile('.git/commit-id')
 
-        step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'ci/qa.nuxeo.com'], statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: 'Building on Nuxeo CI', state: 'PENDING']]]])
-        sh '''#!/bin/bash
+        sh '''#!/bin/bash -ex
+rm -rf venv
+virtualenv venv
+'''
+        stage 'build'
+        sh '''#!/bin/bash -ex
 source venv/bin/activate
 pip install -r dev-requirements.txt
 pip install -e .
 '''
         stage 'test'
-        sh '''#!/bin/bash
+        sh '''#!/bin/bash -ex
 source venv/bin/activate
 nosetests
 '''
         stage 'package'
-        sh '''#!/bin/bash
+        sh '''#!/bin/bash -ex
 source venv/bin/activate
 python setup.py sdist'''
-        docker.withRegistry('https://dockerpriv.nuxeo.com/') {
-            image = docker.build 'nuxeo/nuxeo-tools-hooks'
 
-            sh "docker tag ${image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${env.BRANCH_NAME}"
-            sh "docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${env.BRANCH_NAME}"
+        image = docker.build 'nuxeo/nuxeo-tools-hooks'
 
-            sh "docker tag ${image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${commit_id}"
-            sh "docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${commit_id}"
-        }
+        sh "docker tag ${image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${env.BRANCH_NAME}"
+        sh "docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${env.BRANCH_NAME}"
+
+        sh "docker tag ${image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${commit_id}"
+        sh "docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${commit_id}"
+
         step([$class: 'ArtifactArchiver', allowEmptyArchive: true, artifacts: 'dist/*.tar.gz', excludes: null, fingerprint: true, onlyIfSuccessful: true])
         step([$class: 'JiraIssueUpdater', issueSelector: [$class: 'DefaultIssueSelector'], scm: scm])
         step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'ci/qa.nuxeo.com'], statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: 'Building on Nuxeo CI', state: 'SUCCESS']]]])
@@ -68,10 +67,14 @@ python setup.py sdist'''
             ], wait: false
         }
 
-        slackSend channel: '#devops-notifs', color: 'good', message: "${env.JOB_NAME} - #${env.BUILD_NUMBER} Success (<${env.BUILD_URL}|Open>)"
+        if('SUCCESS' != currentBuild.getPreviousBuild().getResult()) {
+            slackSend channel: '#devops-notifs', color: 'good', message: "${env.JOB_NAME} - #${env.BUILD_NUMBER} Back to normal (<${env.BUILD_URL}|Open>)"
+        }
     } catch (e) {
         step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'ci/qa.nuxeo.com'], statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: 'Building on Nuxeo CI', state: 'FAILURE']]]])
-        slackSend channel: '#devops-notifs', color: 'danger', message: "${env.JOB_NAME} - #${env.BUILD_NUMBER} Failure (<${env.BUILD_URL}|Open>)"
+        if('FAILURE' != currentBuild.getPreviousBuild().getResult()) {
+            slackSend channel: '#devops-notifs', color: 'danger', message: "${env.JOB_NAME} - #${env.BUILD_NUMBER} Failure (<${env.BUILD_URL}|Open>)"
+        }
         throw e
     }
 }
