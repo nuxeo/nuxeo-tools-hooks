@@ -19,6 +19,7 @@ Contributors:
 
 from nxtools import ServiceContainer, services
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
+from nxtools.hooks.endpoints.webhook.github_hook import GithubHook
 from nxtools.hooks.entities.github_entities import PullRequestEvent
 from nxtools.hooks.services.github_service import GithubService
 
@@ -28,8 +29,8 @@ class GithubStorePullRequestHandler(AbstractGithubHandler):
 
     MSG_OK = "OK"
 
-    def can_handle(self, payload_event):
-        return "pull_request" == payload_event
+    def can_handle(self, headers, body):
+        return "pull_request" == headers[GithubHook.payloadHeader]
 
     def handle(self, payload_body):
         event = PullRequestEvent(None, None, payload_body, True)

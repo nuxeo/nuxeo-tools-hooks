@@ -127,8 +127,8 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
     def email_template(self):
         return self.get_config("jinja_template", "notify_mail.txt")
 
-    def can_handle(self, payload_event):
-        return "push" == payload_event
+    def can_handle(self, headers, body):
+        return "push" == headers[GithubHook.payloadHeader]
 
     def handle(self, payload_body):
         event = PushEvent(None, None, payload_body, True)
