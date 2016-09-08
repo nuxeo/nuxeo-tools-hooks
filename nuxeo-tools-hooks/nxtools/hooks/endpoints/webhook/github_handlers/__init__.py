@@ -33,7 +33,7 @@ class AbstractGithubHandler(object):
         pass
 
     @abstractmethod
-    def can_handle(self, payload_event):
+    def can_handle(self, headers, body):
         pass
 
     @property

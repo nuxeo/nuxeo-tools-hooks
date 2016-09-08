@@ -35,9 +35,10 @@ from nxtools.hooks.services.config import Config
 from nxtools.hooks.services.github_service import NoSuchOrganizationException, GithubService
 
 
-class UnknownEventException(Exception):
-    def __init__(self, event):
-        super(UnknownEventException, self).__init__("Unknown event '%s'" % event)
+class UnhandledGithubEvent(Exception):
+    def __init__(self, headers, body):
+        super(UnhandledGithubEvent, self).__init__("No proper handlers for github event '%s'" %
+                                                   headers[GithubHook.payloadHeader])
 
 
 class InvalidPayloadException(Exception):
@@ -98,8 +99,7 @@ class GithubHook(AbstractWebHook):
         """
 
         if GithubHook.payloadHeader in headers:
-            payload_event = headers[GithubHook.payloadHeader]
-            handlers = [handler for handler in self.handlers if handler.can_handle(payload_event)]
+            handlers = [handler for handler in self.handlers if handler.can_handle(headers, body)]
 
             if handlers:
                 json_body = json.loads(body)
@@ -113,4 +113,4 @@ class GithubHook(AbstractWebHook):
 
                 return response.getvalue(), status
             else:
-                raise UnknownEventException(payload_event)
+                raise UnhandledGithubEvent(headers, body)

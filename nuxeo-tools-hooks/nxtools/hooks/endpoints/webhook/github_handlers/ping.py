@@ -18,13 +18,14 @@ Contributors:
 """
 from nxtools import ServiceContainer
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
+from nxtools.hooks.endpoints.webhook.github_hook import GithubHook
 
 
 @ServiceContainer.service
 class GithubPingHandler(AbstractGithubHandler):
 
-    def can_handle(self, payload_event):
-        return "ping" == payload_event
+    def can_handle(self, headers, body):
+        return "ping" == headers[GithubHook.payloadHeader]
 
     def handle(self, payload_body):
         return 200, 'PONG'

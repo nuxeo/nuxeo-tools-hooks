@@ -23,7 +23,7 @@ from flask.app import Flask
 from mock.mock import patch
 from nxtools import services
 from nxtools.hooks.endpoints.webhook import WebHookEndpoint, NoSuchHookException
-from nxtools.hooks.endpoints.webhook.github_hook import GithubHook, UnknownEventException, InvalidPayloadException
+from nxtools.hooks.endpoints.webhook.github_hook import GithubHook, UnhandledGithubEvent, InvalidPayloadException
 from nxtools.hooks.tests.webhooks import WebHooksTestCase
 
 
@@ -58,7 +58,7 @@ class WebhooksTest(WebHooksTestCase):
 
     def test_github(self):
         hook = GithubHook()
-        with self.assertRaises(UnknownEventException):
+        with self.assertRaises(UnhandledGithubEvent):
             hook.handle({GithubHook.payloadHeader: "Unknown"}, "{}")
 
         with self.assertRaises(InvalidPayloadException):
