@@ -37,6 +37,7 @@ class MemoryHTTPCache(HTTPCache):
 
     @staticmethod
     def build_key(method, url, body, headers):
+        body = '' if body is None else body
         return method, url, len(body), hashlib.md5(body).hexdigest(), {key.lower(): value for key, value in headers.iteritems()}
 
     def get(self, method, url, body=None, headers={}, default=None):
