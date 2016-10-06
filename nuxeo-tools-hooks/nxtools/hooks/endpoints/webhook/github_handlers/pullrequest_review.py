@@ -241,6 +241,7 @@ class GithubReviewNotifyHandler(AbstractGithubHandler):
         return "pull_request" == headers[GithubHook.payloadHeader]
 
     def handle(self, payload_body):
+        log.info('GithubReviewNotifyHandler.handle')
         event = PullRequestEvent(None, None, payload_body, True)
         review_service = services.get(GithubReviewService)  # type: GithubReviewService
 
@@ -265,6 +266,7 @@ class GithubReviewCommentHandler(AbstractGithubHandler):
         return "issue_comment" == headers[GithubHook.payloadHeader]
 
     def handle(self, payload_body):
+        log.info('GithubReviewCommentHandler.handle')
         event = IssueCommentEvent(None, None, payload_body, True)
         review_service = services.get(GithubReviewService)  # type: GithubReviewService
 
