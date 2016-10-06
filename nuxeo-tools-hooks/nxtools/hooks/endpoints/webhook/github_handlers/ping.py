@@ -16,9 +16,13 @@ limitations under the License.
 Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
 """
+import logging
+
 from nxtools import ServiceContainer
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
 from nxtools.hooks.endpoints.webhook.github_hook import GithubHook
+
+log = logging.getLogger(__name__)
 
 
 @ServiceContainer.service
@@ -28,4 +32,5 @@ class GithubPingHandler(AbstractGithubHandler):
         return "ping" == headers[GithubHook.payloadHeader]
 
     def handle(self, payload_body):
+        log.info('GithubPingHandler.handle')
         return 200, 'PONG'

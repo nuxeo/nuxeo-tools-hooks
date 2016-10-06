@@ -131,6 +131,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
         return "push" == headers[GithubHook.payloadHeader]
 
     def handle(self, payload_body):
+        log.info('GithubPushNotifyMailHandler.handle')
         event = PushEvent(None, None, payload_body, True)
         email_service = services.get(EmailService)
 
