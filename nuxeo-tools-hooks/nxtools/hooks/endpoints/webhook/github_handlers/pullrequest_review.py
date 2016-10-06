@@ -246,10 +246,13 @@ class GithubReviewNotifyHandler(AbstractGithubHandler):
         review_service = services.get(GithubReviewService)  # type: GithubReviewService
 
         if review_service.activate and event.repository.private is False:
-            last_commit = event.pull_request.get_commits().reversed[0]  # type: Commit
+            repository = services.get(GithubService).get_organization(event.organization.login) \
+                .get_repo(event.repository.name)
+            pull_request = repository.get_pull(event.pull_request.number)  # type: PullRequest
+            last_commit = pull_request.get_commits().reversed[0]  # type: Commit
 
             if event.action in ['created', 'synchronize']:
-                review_service.set_review_status(event.pull_request, last_commit)
+                review_service.set_review_status(pull_request, last_commit)
 
             if event.action == 'created':
                 owners = review_service.get_owners(event)
