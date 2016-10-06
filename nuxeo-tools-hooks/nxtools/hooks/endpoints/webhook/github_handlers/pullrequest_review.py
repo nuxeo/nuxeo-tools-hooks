@@ -137,23 +137,35 @@ class GithubReviewService(AbstractService):
 
         return reviews
 
-    def set_review_status(self, pull_request, last_commit):
+    def set_review_status(self, repository, pull_request, last_commit):
         """
-         :type pull_request: PullRequest
-         :type last_commit: Commit
+         :type repository: github.Repository.Repository
+         :type pull_request: github.PullRequest.PullRequest
+         :type last_commit: github.Commit.Commit
          """
         reviews_count = self.count_reviews(pull_request, last_commit)
 
         status = self.success_status if reviews_count >= self.required_reviews else self.pending_status
+        description = '%d (of %d) reviews' % (reviews_count, self.required_reviews)
+
+        log.info('Setting status of %s/%s/commits/%s to: %s',
+                 repository.organization.login,
+                 repository.name,
+                 last_commit.sha,
+                 description)
 
         last_commit.create_status(
             status,
-            description='%d (of %d) reviews' % (reviews_count, self.required_reviews),
+            description=description,
             context=self.review_context)
 
     def slack_notify(self, event, owners):
         reviewers = ", ".join(["@" + o for o in owners])
         slack = SlackClient(self.slack_token)
+
+        log.info('Sending slack notification for %s/%s/pull/%d in %s',
+                 event.organization.login, event.repository.name, event.pull_request.number, self.slack_channel)
+
         slack.api_call('chat.postMessage',
                        channel=self.slack_channel,
                        username=self.slack_username,
@@ -190,6 +202,10 @@ class GithubReviewService(AbstractService):
             get_repo(event.repository.name)  # type: RepositoryWrapper
 
         pull_request = repository.get_pull(event.pull_request.number)  # type: PullRequest
+
+        log.info('Notifying potential reviewers with a comment on %s/%s/pull/%d',
+                 event.organization.login, event.repository.name, event.pull_request.number, self.slack_channel)
+
         pull_request.create_issue_comment("From the blame information on this pull request, potential reviewers: "
                                           + reviewers)
 
@@ -252,7 +268,7 @@ class GithubReviewNotifyHandler(AbstractGithubHandler):
             last_commit = pull_request.get_commits().reversed[0]  # type: Commit
 
             if event.action in ['created', 'synchronize']:
-                review_service.set_review_status(pull_request, last_commit)
+                review_service.set_review_status(repository, pull_request, last_commit)
 
             if event.action == 'created':
                 owners = review_service.get_owners(event)
@@ -282,6 +298,6 @@ class GithubReviewCommentHandler(AbstractGithubHandler):
                 pr = repository.get_pull(event.issue.number)  # type: PullRequest
                 last_commit = pr.get_commits().reversed[0]  # type: Commit
 
-                review_service.set_review_status(pr, last_commit)
+                review_service.set_review_status(repository, pr, last_commit)
 
         return 200, 'OK'
