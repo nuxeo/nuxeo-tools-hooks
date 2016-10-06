@@ -70,7 +70,7 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
             blame = review_service.parse_blame(blame_file.read())
 
         self.mocks.organization.get_repo.return_value.html_url = 'http://void.null/'
-        self.mocks.organization.get_repo.return_value.get_pull.return_value.id = 42
+        self.mocks.organization.get_repo.return_value.get_pull.return_value.number = 42
         self.mocks.organization.get_repo.return_value.get_pull.return_value.get_files.return_value = self.mocks.files
 
         deletions = review_service.parse_patch(self.mocks.files[1].patch)

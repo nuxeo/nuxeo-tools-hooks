@@ -86,7 +86,7 @@ class GithubReviewService(AbstractService):
             get_repo(event.repository.name)  # type: RepositoryWrapper
 
         pull_request = repository.get_pull(event.pull_request.number)  # type: PullRequest
-        pr_id = '%s/%s/pull/%d' % (event.organization.login, repository.name, pull_request.id)
+        pr_id = '%s/%s/pull/%d' % (event.organization.login, repository.name, pull_request.number)
 
         log.info('%s: Checking reviewers', pr_id)
 
@@ -261,16 +261,18 @@ class GithubReviewNotifyHandler(AbstractGithubHandler):
         event = PullRequestEvent(None, None, payload_body, True)
         review_service = services.get(GithubReviewService)  # type: GithubReviewService
 
+        log.debug('Review active: %s, Repository private: %s', review_service.activate, event.repository.private)
         if review_service.activate and event.repository.private is False:
             repository = services.get(GithubService).get_organization(event.organization.login) \
                 .get_repo(event.repository.name)
             pull_request = repository.get_pull(event.pull_request.number)  # type: PullRequest
             last_commit = pull_request.get_commits().reversed[0]  # type: Commit
 
-            if event.action in ['created', 'synchronize']:
+            log.debug('PullRequestEvent action: %s', event.action)
+            if event.action in ['opened', 'synchronize']:
                 review_service.set_review_status(repository, pull_request, last_commit)
 
-            if event.action == 'created':
+            if event.action == 'opened':
                 owners = review_service.get_owners(event)
                 review_service.slack_notify(event, owners)
                 review_service.github_comment(event, owners)
@@ -289,7 +291,10 @@ class GithubReviewCommentHandler(AbstractGithubHandler):
         event = IssueCommentEvent(None, None, payload_body, True)
         review_service = services.get(GithubReviewService)  # type: GithubReviewService
 
+        log.debug('Review active: %s, Repository private: %s', review_service.activate, event.repository.private)
         if review_service.activate and event.repository.private is False:
+
+            log.debug('Comment body: "%s"', event.comment.body)
             if event.comment.body.strip() == review_service.mark_reviewed_comment or \
                     ('changes' in event.raw_data
                         and event.raw_data['changes']['body']['from'].strip() == review_service.mark_reviewed_comment):
