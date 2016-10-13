@@ -286,22 +286,6 @@ def repository_ignore(handler, event):
     :type handler: nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
     :type event: nxtools.hooks.entities.github_entities.PushEvent
     """
-    addWarn = False
-    if event.repository.name in handler.ignore_repositories:
-        has_system = False
-        has_non_system = False
-        ignored_urls = []
-        for commit in event.commits:
-            if re.match(".*updated by SYSTEM.*", commit.message):
-                has_system = True
-                ignored_urls.append(commit.url)
-            else:
-                has_non_system = True
-        if has_system and not has_non_system:
-            if handler.is_jenkins(event):
-                return True, False, GithubPushNotifyMailHandler.MSG_IGNORE_COMMITS % (", ".join(ignored_urls))
-            else:
-                addWarn = True
-    return False, addWarn, None
+    return event.repository.name in handler.ignore_repositories, False, None
 
 

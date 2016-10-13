@@ -295,46 +295,27 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
             self.assertRegexpMatches(email.body, 'JIRA: https://jira.nuxeo.com/browse/NXS-1234')
             self.assertRegexpMatches(email.body, 'JIRA: https://jira.nuxeo.com/browse/NXS-1234')
 
-    def test_jenkins_payload_with_ignore(self):
+    def test_ignore_repository(self):
         with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
             self.config._config.set(self.handler.config_section, "ignored_repositories",
-                                                 "qapriv.nuxeo.org-conf")
+                                    "qapriv.nuxeo.org-conf")
             self.config._config.set(self.handler.config_section, "ignore_checks",
-                                                 "nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail."
-                                                 "repository_ignore")
-
-            event = PushEvent(None, None, body, True)
-
-            self.assertTupleEqual((False, False, None), self.handler.check_branch_ignored(event))
+                                    "nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail."
+                                    "repository_ignore")
             self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler.handle(body))
             self.email_service.sendemail.assert_called_once()
 
-            self.assertTrue(body["pusher"])
-            self.assertTrue(body["commits"][0])
-            self.assertTrue(body["repository"])
-            body["commits"].append(body["commits"][0].copy())
-            body["commits"][0]["message"] = "NXP-8238: updated by SYSTEM."
-            body["commits"][1]["message"] = "NXP-8238: yo"
-            body["repository"]["name"] = "qapriv.nuxeo.org-conf"
-            body["pusher"] = {
-                "name": self.handler.jenkins_username,
-                "email": self.handler.jenkins_email,
-            }
-
             event = PushEvent(None, None, body, True)
 
             self.assertTupleEqual((False, False, None), self.handler.check_branch_ignored(event))
 
-            body["commits"][1]["message"] = "NXP-8238: updated by SYSTEM."
+            self.assertTrue(body["repository"])
+            body["repository"]["name"] = "qapriv.nuxeo.org-conf"
+
             event = PushEvent(None, None, body, True)
 
-            response = GithubPushNotifyMailHandler.MSG_IGNORE_COMMITS % ", ".join([
-                event.commits[0].url, event.commits[1].url
-            ])
-            self.assertTupleEqual((True, False, response), self.handler.check_branch_ignored(event))
-            self.assertTupleEqual((200, response), self.handler.handle(body))
-            self.email_service.sendemail.assert_called_once()
+            self.assertTupleEqual((True, False, None), self.handler.check_branch_ignored(event))
 
     def test_standard_payload(self):
         with GithubHookHandlerTest.payload_file('github_push') as payload:
