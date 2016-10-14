@@ -130,7 +130,11 @@ class GithubReviewService(AbstractService):
 
     def filter_and_sort_owners(self, owners, pr_creator, authors):
         return [o for o, count in sorted(owners.items(), key=operator.itemgetter(1), reverse=True)
-                if o != 'none' and o != pr_creator and o not in authors]
+                if o != 'none' and o != pr_creator and o not in authors and self.has_required_organizations(o)]
+
+    def has_required_organizations(self, user_name):
+        return True in [services.get(GithubService).get_organization(name).has_in_members(user_name)
+                        for name in self.required_organizations] if self.required_organizations else True
 
     def count_reviews(self, pull_request, last_commit):
         """
@@ -140,7 +144,8 @@ class GithubReviewService(AbstractService):
         reviews = 0
         for comment in pull_request.get_issue_comments():  # type: IssueComment
             if comment.created_at > last_commit.commit.author.date and \
-                            comment.body.strip() == self.mark_reviewed_comment:
+                            comment.body.strip() == self.mark_reviewed_comment and \
+                            self.has_required_organizations(comment.user.login):
                 reviews += 1
 
         return reviews
@@ -256,6 +261,13 @@ class GithubReviewService(AbstractService):
     @property
     def review_context(self):
         return self.config('review_context', 'code-review/nuxeo')
+
+    @property
+    def required_organizations(self):
+        orgas = self.config('required_organizations', [])
+        if orgas:
+            orgas = re.sub(r"\s+", "", orgas, flags=re.UNICODE).split(",")
+        return orgas
 
 
 @ServiceContainer.service
