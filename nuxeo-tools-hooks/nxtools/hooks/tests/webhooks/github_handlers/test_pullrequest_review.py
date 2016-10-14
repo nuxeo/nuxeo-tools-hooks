@@ -18,6 +18,7 @@ Contributors:
 """
 import json
 
+from github.Commit import Commit
 from github.CommitStatus import CommitStatus
 from github.File import File
 from mock.mock import patch
@@ -69,9 +70,13 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
         with open('nxtools/hooks/tests/resources/github_handlers/github_blame.html') as blame_file:
             blame = review_service.parse_blame(blame_file.read())
 
+        self.mocks.commits = []
+
         self.mocks.organization.get_repo.return_value.html_url = 'http://void.null/'
         self.mocks.organization.get_repo.return_value.get_pull.return_value.number = 42
         self.mocks.organization.get_repo.return_value.get_pull.return_value.get_files.return_value = self.mocks.files
+        self.mocks.organization.get_repo.return_value.get_pull.return_value.get_commits.return_value = \
+            self.mocks.commits
 
         deletions = review_service.parse_patch(self.mocks.files[1].patch)
 
@@ -89,6 +94,14 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
                                        return_value=None):
 
             self.assertListEqual(['jcarsique', 'efge', 'atchertchian'], review_service.get_owners(event))
+
+            self.mocks.commits += [Commit(None, None, {
+                "author": {"login": "jcarsique"}
+            }, True), Commit(None, None, {
+                "author": {"login": "efge"}
+            }, True)]
+
+            self.assertListEqual(['mguillaume', 'atchertchian', 'tmartins'], review_service.get_owners(event))
 
     def test_review_pull_request(self):
         with GithubHookHandlerTest.payload_file('github_issue_comment') as payload:
