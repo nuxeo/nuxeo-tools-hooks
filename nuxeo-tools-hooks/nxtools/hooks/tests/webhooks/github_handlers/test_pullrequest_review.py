@@ -44,6 +44,9 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
 
         StoredPullRequest.drop_collection()
 
+    def mocked_in_members(self, username):
+        return username in ['mguillaume', 'jcarsique', 'efge', 'tmartins']
+
     @property
     def handler(self):
         """
@@ -77,6 +80,7 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
         self.mocks.organization.get_repo.return_value.get_pull.return_value.get_files.return_value = self.mocks.files
         self.mocks.organization.get_repo.return_value.get_pull.return_value.get_commits.return_value = \
             self.mocks.commits
+        self.mocks.organization.has_in_members.side_effect = self.mocked_in_members
 
         deletions = review_service.parse_patch(self.mocks.files[1].patch)
 
@@ -102,6 +106,12 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
             }, True)]
 
             self.assertListEqual(['mguillaume', 'atchertchian', 'tmartins'], review_service.get_owners(event))
+
+            services.get(Config).set_request_environ({
+                Config.ENV_PREFIX + 'GITHUBREVIEW_REQUIRED_ORGANIZATIONS': 'nuxeo'
+            })
+
+            self.assertListEqual(['mguillaume', 'tmartins'], review_service.get_owners(event))
 
     def test_review_pull_request(self):
         with GithubHookHandlerTest.payload_file('github_issue_comment') as payload:
