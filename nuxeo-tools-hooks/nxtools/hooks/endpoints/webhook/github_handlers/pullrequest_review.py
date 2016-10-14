@@ -24,6 +24,8 @@ import re
 from github.Commit import Commit
 from github.File import File
 from github.IssueComment import IssueComment
+from github.NamedUser import NamedUser
+from github.Organization import Organization
 from github.PullRequest import PullRequest
 from nxtools import ServiceContainer, services
 from nxtools.hooks.endpoints.webhook.github_hook import AbstractGithubHandler, GithubHook
@@ -110,6 +112,9 @@ class GithubReviewService(AbstractService):
                 if name:
                     deletion_owners[name] = deletion_owners[name] + 1 if name in deletion_owners else 1
 
+        authors = [commit.author.login for commit in pull_request.get_commits()]
+        pr_creator = event.pull_request.user.login
+
         log.debug('%s: deleted_owners: %s', pr_id, deletion_owners)
         log.debug('%s: all_owners: %s', pr_id, all_owners)
 
@@ -117,12 +122,15 @@ class GithubReviewService(AbstractService):
             if owner in all_owners:
                 del all_owners[owner]
 
-        owners = [owner for owner, count in
-                  sorted(deletion_owners.items(), key=operator.itemgetter(1), reverse=True)[:1] +
-                  sorted(all_owners.items(), key=operator.itemgetter(1), reverse=True)
-                  if owner != 'none' and owner != event.pull_request.user.login]
+        owners = [owner for owner in
+                  self.filter_and_sort_owners(deletion_owners, pr_creator, authors)[:1] +
+                  self.filter_and_sort_owners(all_owners, pr_creator, authors)]
 
         return owners[:self.number_reviewers]
+
+    def filter_and_sort_owners(self, owners, pr_creator, authors):
+        return [o for o, count in sorted(owners.items(), key=operator.itemgetter(1), reverse=True)
+                if o != 'none' and o != pr_creator and o not in authors]
 
     def count_reviews(self, pull_request, last_commit):
         """
