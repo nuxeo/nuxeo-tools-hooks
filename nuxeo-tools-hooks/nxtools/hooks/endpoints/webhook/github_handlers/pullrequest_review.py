@@ -48,21 +48,22 @@ class GithubReviewService(AbstractService):
         deleted_lines = []
         current_from_line = 0
 
-        for line in patch.splitlines():
-            if line.startswith('@@'):
-                matches = re.match(r"@@ -([0-9]+),?([0-9]+)? \+([0-9]+),?([0-9]+)? @@", line)
-                if matches is not None:
-                    from_line = int(matches.group(1))
-                    # from_count = int(matches.group(2))
-                    # to_line = int(matches.group(3))
-                    # to_count = int(matches.group(4))
+        if patch:
+            for line in patch.splitlines():
+                if line.startswith('@@'):
+                    matches = re.match(r"@@ -([0-9]+),?([0-9]+)? \+([0-9]+),?([0-9]+)? @@", line)
+                    if matches is not None:
+                        from_line = int(matches.group(1))
+                        # from_count = int(matches.group(2))
+                        # to_line = int(matches.group(3))
+                        # to_count = int(matches.group(4))
 
-                    current_from_line = from_line
-                continue
-            if line.startswith('-'):
-                deleted_lines.append(current_from_line)
-            if not line.startswith('+'):
-                current_from_line += 1
+                        current_from_line = from_line
+                    continue
+                if line.startswith('-'):
+                    deleted_lines.append(current_from_line)
+                if not line.startswith('+'):
+                    current_from_line += 1
 
         return deleted_lines
 
@@ -94,7 +95,7 @@ class GithubReviewService(AbstractService):
 
         log.debug('%s: Getting & Parsing patch for each files of PR', pr_id)
         for pr_file in pull_request.get_files():  # type: File
-            if 'modified' == pr_file.status:  # todo: remove binary files
+            if 'modified' == pr_file.status:
                 files.append({'file': pr_file.filename, 'deletions': self.parse_patch(pr_file.patch)})
 
         files.sort(key=lambda f: len(f['deletions']), reverse=True)
