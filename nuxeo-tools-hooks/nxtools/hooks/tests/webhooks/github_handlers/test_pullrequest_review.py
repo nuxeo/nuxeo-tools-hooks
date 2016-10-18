@@ -82,6 +82,7 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
             self.mocks.commits
         self.mocks.organization.has_in_members.side_effect = self.mocked_in_members
 
+        review_service.parse_patch(self.mocks.files[2].patch)
         deletions = review_service.parse_patch(self.mocks.files[1].patch)
 
         self.assertEqual(3, len(deletions))
