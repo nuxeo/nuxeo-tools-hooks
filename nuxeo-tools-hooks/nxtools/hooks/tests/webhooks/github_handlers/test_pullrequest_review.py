@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and contributors.
 
@@ -21,6 +22,7 @@ import json
 from github.Commit import Commit
 from github.CommitStatus import CommitStatus
 from github.File import File
+from github.GithubObject import GithubObject
 from mock.mock import patch
 from nxtools import services
 from nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_review import GithubReviewNotifyHandler, \
@@ -116,9 +118,9 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
 
     def test_review_pull_request(self):
         with GithubHookHandlerTest.payload_file('github_issue_comment') as payload:
-            body = self.get_json_body_from_payload(payload)
+            payload_body = self.get_json_body_from_payload(payload)
 
-        event = IssueCommentEvent(None, None, body, True)
+        event = IssueCommentEvent(None, None, payload_body, True)
         handler = services.get(GithubReviewCommentHandler)  # type: GithubReviewCommentHandler
 
         services.get(Config).set_request_environ({
@@ -133,6 +135,12 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
         self.mocks.organization.get_repo.return_value.get_pull.return_value.get_issue_comments.return_value = \
             [event.comment]
 
-        handler.handle(body)
+        handler.handle(payload_body)
+
+        self.mocks.commit.create_status.assert_called_once()
+
+        payload_body['comment']['body'] = u"👍 "
+        self.mocks.commit.create_status.reset_mock()
+        handler.handle(payload_body)
 
         self.mocks.commit.create_status.assert_called_once()

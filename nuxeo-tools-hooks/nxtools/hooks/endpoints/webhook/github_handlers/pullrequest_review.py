@@ -145,7 +145,7 @@ class GithubReviewService(AbstractService):
         reviews = 0
         for comment in pull_request.get_issue_comments():  # type: IssueComment
             if comment.created_at > last_commit.commit.author.date and \
-                            comment.body.strip() == self.mark_reviewed_comment and \
+                            comment.body.strip() in self.mark_reviewed_comment and \
                             self.has_required_organizations(comment.user.login):
                 reviews += 1
 
@@ -253,7 +253,8 @@ class GithubReviewService(AbstractService):
 
     @property
     def mark_reviewed_comment(self):
-        return self.config('mark_reviewed_comment', ':+1:')
+        allowed_comments = self.config('mark_reviewed_comment', u":+1:,\U0001F44D")
+        return re.sub(r"\s+", "", allowed_comments, flags=re.UNICODE).split(",") if allowed_comments else []
 
     @property
     def required_reviews(self):
@@ -316,9 +317,9 @@ class GithubReviewCommentHandler(AbstractGithubHandler):
         if review_service.activate and event.repository.private is False:
 
             log.debug('Comment body: "%s"', event.comment.body)
-            if event.comment.body.strip() == review_service.mark_reviewed_comment or \
+            if event.comment.body.strip() in review_service.mark_reviewed_comment or \
                     ('changes' in event.raw_data
-                        and event.raw_data['changes']['body']['from'].strip() == review_service.mark_reviewed_comment):
+                        and event.raw_data['changes']['body']['from'].strip() in review_service.mark_reviewed_comment):
                 repository = services.get(GithubService).get_organization(event.organization.login)\
                     .get_repo(event.repository.name)
                 pr = repository.get_pull(event.issue.number)  # type: PullRequest
