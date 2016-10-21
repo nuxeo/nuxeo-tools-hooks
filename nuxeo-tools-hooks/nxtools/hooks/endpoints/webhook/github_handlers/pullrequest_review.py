@@ -291,6 +291,9 @@ class GithubReviewNotifyHandler(AbstractGithubHandler):
             last_commit = pull_request.get_commits().reversed[0]  # type: Commit
 
             log.debug('PullRequestEvent action: %s', event.action)
+            log.info('Review asked for %s/%s/pull/%d/commits/%s',
+                     event.organization.login, event.repository.name, event.issue.number, last_commit.sha)
+
             if event.action in ['opened', 'synchronize']:
                 review_service.set_review_status(repository, pull_request, last_commit)
 
@@ -324,6 +327,8 @@ class GithubReviewCommentHandler(AbstractGithubHandler):
                     .get_repo(event.repository.name)
                 pr = repository.get_pull(event.issue.number)  # type: PullRequest
                 last_commit = pr.get_commits().reversed[0]  # type: Commit
+                log.info('Got review for %s/%s/pull/%d/commits/%s',
+                          event.organization.login, event.repository.name, event.issue.number, last_commit.sha)
 
                 review_service.set_review_status(repository, pr, last_commit)
 
