@@ -292,7 +292,7 @@ class GithubReviewNotifyHandler(AbstractGithubHandler):
 
             log.debug('PullRequestEvent action: %s', event.action)
             log.info('Review asked for %s/%s/pull/%d/commits/%s',
-                     event.organization.login, event.repository.name, event.issue.number, last_commit.sha)
+                     event.organization.login, event.repository.name, event.pull_request.number, last_commit.sha)
 
             if event.action in ['opened', 'synchronize']:
                 review_service.set_review_status(repository, pull_request, last_commit)
