@@ -16,7 +16,7 @@ limitations under the License.
 Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
 """
-
+import json
 from abc import ABCMeta, abstractmethod
 from nxtools import services
 from nxtools.hooks.services.config import Config
@@ -28,8 +28,11 @@ class AbstractGithubHandler(object):
     def __init__(self):
         self.__config_section = type(self).__name__
 
-    @abstractmethod
     def handle(self, payload_body):
+        return self._do_handle(payload_body)
+
+    @abstractmethod
+    def _do_handle(self, json_payload_body):
         pass
 
     @abstractmethod
@@ -42,3 +45,11 @@ class AbstractGithubHandler(object):
 
     def get_config(self, key, default=None):
         return services.get(Config).get(self.config_section, key, default)
+
+
+class AbstractGithubJsonHandler(AbstractGithubHandler):
+    __metaclass__ = ABCMeta
+
+    def handle(self, payload_body):
+        return self._do_handle(json.loads(payload_body))
+

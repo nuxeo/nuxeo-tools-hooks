@@ -27,7 +27,7 @@ import logging
 from jinja2.environment import Environment
 from jinja2.loaders import PackageLoader
 from nxtools import services, ServiceContainer
-from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
+from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubJsonHandler
 from nxtools.hooks.endpoints.webhook.github_hook import InvalidPayloadException, GithubHook
 from nxtools.hooks.entities.github_entities import PushEvent
 from nxtools.hooks.entities.mail import Email
@@ -39,7 +39,7 @@ log = logging.getLogger(__name__)
 
 
 @ServiceContainer.service
-class GithubPushNotifyMailHandler(AbstractGithubHandler):
+class GithubPushNotifyMailHandler(AbstractGithubJsonHandler):
 
     MSG_BAD_REF = "Unknown branch reference '%s'"
     MSG_IGNORE_BRANCH = "Ignore branch '%s'"
@@ -130,7 +130,7 @@ class GithubPushNotifyMailHandler(AbstractGithubHandler):
     def can_handle(self, headers, body):
         return "push" == headers[GithubHook.payloadHeader]
 
-    def handle(self, payload_body):
+    def _do_handle(self, payload_body):
         log.info('GithubPushNotifyMailHandler.handle')
         event = PushEvent(None, None, payload_body, True)
         email_service = services.get(EmailService)

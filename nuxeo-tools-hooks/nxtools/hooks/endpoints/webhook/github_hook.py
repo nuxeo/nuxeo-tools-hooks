@@ -102,12 +102,11 @@ class GithubHook(AbstractWebHook):
             handlers = [handler for handler in self.handlers if handler.can_handle(headers, body)]
 
             if handlers:
-                json_body = json.loads(body)
                 response = StringIO()
                 status = 200
 
                 for handler in handlers:
-                    s, r = handler.handle(json_body)
+                    s, r = handler.handle(body)
                     response.writelines(unicode(r))
                     status = max(status, s)
 
