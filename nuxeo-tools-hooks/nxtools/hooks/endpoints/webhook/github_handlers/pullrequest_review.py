@@ -113,7 +113,7 @@ class GithubReviewService(AbstractService):
                 if name:
                     deletion_owners[name] = deletion_owners[name] + 1 if name in deletion_owners else 1
 
-        authors = [commit.author.login for commit in pull_request.get_commits()]
+        authors = [commit.author.login for commit in pull_request.get_commits() if commit.author is not None]
         pr_creator = event.pull_request.user.login
 
         log.debug('%s: deleted_owners: %s', pr_id, deletion_owners)
