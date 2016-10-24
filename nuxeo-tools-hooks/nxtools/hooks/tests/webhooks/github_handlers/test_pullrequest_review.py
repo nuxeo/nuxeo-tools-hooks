@@ -135,12 +135,12 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
         self.mocks.organization.get_repo.return_value.get_pull.return_value.get_issue_comments.return_value = \
             [event.comment]
 
-        handler.handle(payload_body)
+        handler._do_handle(payload_body)
 
         self.mocks.commit.create_status.assert_called_once()
 
         payload_body['comment']['body'] = u"👍 "
         self.mocks.commit.create_status.reset_mock()
-        handler.handle(payload_body)
+        handler._do_handle(payload_body)
 
         self.mocks.commit.create_status.assert_called_once()

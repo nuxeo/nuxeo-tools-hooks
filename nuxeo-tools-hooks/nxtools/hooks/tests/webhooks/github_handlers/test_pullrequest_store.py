@@ -56,7 +56,7 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
             self.assertEqual(body["pull_request"]["head"]["sha"], event.pull_request.head.sha)
             self.assertEqual(body["repository"]["name"], event.repository.name)
 
-            self.handler.handle(body)
+            self.handler._do_handle(body)
 
             pull_requests = StoredPullRequest.objects(
                 branch=event.pull_request.head.ref,

@@ -24,10 +24,9 @@ import re
 from github.Commit import Commit
 from github.File import File
 from github.IssueComment import IssueComment
-from github.NamedUser import NamedUser
-from github.Organization import Organization
 from github.PullRequest import PullRequest
 from nxtools import ServiceContainer, services
+from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubJsonHandler
 from nxtools.hooks.endpoints.webhook.github_hook import AbstractGithubHandler, GithubHook
 from nxtools.hooks.entities.github_entities import PullRequestEvent, RepositoryWrapper, IssueCommentEvent
 from nxtools.hooks.services import AbstractService
@@ -273,12 +272,12 @@ class GithubReviewService(AbstractService):
 
 
 @ServiceContainer.service
-class GithubReviewNotifyHandler(AbstractGithubHandler):
+class GithubReviewNotifyHandler(AbstractGithubJsonHandler):
 
     def can_handle(self, headers, body):
         return "pull_request" == headers[GithubHook.payloadHeader]
 
-    def handle(self, payload_body):
+    def _do_handle(self, payload_body):
         log.info('GithubReviewNotifyHandler.handle')
         event = PullRequestEvent(None, None, payload_body, True)
         review_service = services.get(GithubReviewService)  # type: GithubReviewService
@@ -306,12 +305,12 @@ class GithubReviewNotifyHandler(AbstractGithubHandler):
 
 
 @ServiceContainer.service
-class GithubReviewCommentHandler(AbstractGithubHandler):
+class GithubReviewCommentHandler(AbstractGithubJsonHandler):
 
     def can_handle(self, headers, body):
         return "issue_comment" == headers[GithubHook.payloadHeader]
 
-    def handle(self, payload_body):
+    def _do_handle(self, payload_body):
         log.info('GithubReviewCommentHandler.handle')
         event = IssueCommentEvent(None, None, payload_body, True)
         review_service = services.get(GithubReviewService)  # type: GithubReviewService

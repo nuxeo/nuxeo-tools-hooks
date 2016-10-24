@@ -31,6 +31,6 @@ class GithubPingHandler(AbstractGithubHandler):
     def can_handle(self, headers, body):
         return "ping" == headers[GithubHook.payloadHeader]
 
-    def handle(self, payload_body):
+    def _do_handle(self, payload_body):
         log.info('GithubPingHandler.handle')
         return 200, 'PONG'

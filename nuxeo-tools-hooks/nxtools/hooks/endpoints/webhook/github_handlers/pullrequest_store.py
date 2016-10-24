@@ -19,7 +19,7 @@ Contributors:
 import logging
 
 from nxtools import ServiceContainer, services
-from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandler
+from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubJsonHandler
 from nxtools.hooks.endpoints.webhook.github_hook import GithubHook
 from nxtools.hooks.entities.github_entities import PullRequestEvent
 from nxtools.hooks.services.github_service import GithubService
@@ -28,14 +28,14 @@ log = logging.getLogger(__name__)
 
 
 @ServiceContainer.service
-class GithubStorePullRequestHandler(AbstractGithubHandler):
+class GithubStorePullRequestHandler(AbstractGithubJsonHandler):
 
     MSG_OK = "OK"
 
     def can_handle(self, headers, body):
         return "pull_request" == headers[GithubHook.payloadHeader]
 
-    def handle(self, payload_body):
+    def _do_handle(self, payload_body):
         log.info('GithubStorePullRequestHandler.handle')
         event = PullRequestEvent(None, None, payload_body, True)
         services.get(GithubService).create_pullrequest(event.organization, event.repository, event.pull_request)

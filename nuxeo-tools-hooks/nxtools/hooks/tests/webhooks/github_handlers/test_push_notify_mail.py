@@ -94,7 +94,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
             self.assertTrue(self.handler.is_bad_ref(self.get_event_from_body(body)))
             self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_BAD_REF % body["ref"]),
-                                  self.handler.handle(body))
+                                  self.handler._do_handle(body))
             self.email_service.sendemail.assert_not_called()
 
     def test_ignored_stable_branch_payload(self):
@@ -111,7 +111,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
             event = self.get_event_from_body(body)
             branch = event.ref[11:]
             self.assertTupleEqual((False, True, None), self.handler.check_branch_ignored(event))
-            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler.handle(body))
+            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler._do_handle(body))
             self.email_service.sendemail.assert_called_once()
 
             self.assertFalse(self.handler.is_jenkins(event))
@@ -137,7 +137,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
             event = self.get_event_from_body(body)
             branch = event.ref[11:]
             self.assertTupleEqual((False, True, None), self.handler.check_branch_ignored(event))
-            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler.handle(body))
+            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler._do_handle(body))
             self.email_service.sendemail.assert_called_once()
             self.assertFalse(self.handler.is_jenkins(event))
 
@@ -165,7 +165,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
             event = self.get_event_from_body(body)
             response = GithubPushNotifyMailHandler.MSG_IGNORE_BRANCH % event.ref[11:]
             self.assertTupleEqual((True, False, response), self.handler.check_branch_ignored(event))
-            self.assertTupleEqual((200, response), self.handler.handle(body))
+            self.assertTupleEqual((200, response), self.handler._do_handle(body))
             self.email_service.sendemail.assert_not_called()
             self.assertTrue(self.handler.is_jenkins(event))
 
@@ -182,7 +182,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
             event = self.get_event_from_body(body)
             branch = event.ref[11:]
             self.assertTupleEqual((False, False, None), self.handler.check_branch_ignored(event))
-            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler.handle(body))
+            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler._do_handle(body))
             self.email_service.sendemail.assert_called_once()
 
             email = self.handler.get_commit_email(event, event.commits[0], False)
@@ -220,7 +220,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
             event = self.get_event_from_body(body)
             self.assertTupleEqual((False, False, None), self.handler.check_branch_ignored(event))
-            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler.handle(body))
+            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler._do_handle(body))
             self.email_service.sendemail.assert_called_once()
 
             email = self.handler.get_commit_email(event, event.commits[0], False)
@@ -240,7 +240,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
             event = PushEvent(None, None, body, True)
             self.assertFalse(self.handler.is_bad_ref(event))
             self.assertTupleEqual((False, False, None), self.handler.check_branch_ignored(event))
-            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler.handle(body))
+            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler._do_handle(body))
             self.email_service.sendemail.assert_called_once()
 
             email = self.handler.get_commit_email(event, event.commits[0], False)
@@ -269,7 +269,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
             event = PushEvent(None, None, body, True)
 
             self.mocks.requester.requestJsonAndCheck.side_effect = Exception
-            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler.handle(body))
+            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler._do_handle(body))
             self.email_service.sendemail.assert_called_once()
 
             email = self.handler.get_commit_email(event, event.commits[0], False)
@@ -286,7 +286,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
 
             event = PushEvent(None, None, body, True)
             self.assertTupleEqual((False, False, None), self.handler.check_branch_ignored(event))
-            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler.handle(body))
+            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler._do_handle(body))
             self.email_service.sendemail.assert_called_once()
 
             email = self.handler.get_commit_email(event, event.commits[0], False)
@@ -303,7 +303,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
             self.config._config.set(self.handler.config_section, "ignore_checks",
                                     "nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail."
                                     "repository_ignore")
-            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler.handle(body))
+            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler._do_handle(body))
             self.email_service.sendemail.assert_called_once()
 
             event = PushEvent(None, None, body, True)
@@ -336,7 +336,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
                 self.mocks.requester.requestJsonAndCheck.return_value = ({}, {'data': diff_file.read()})
                 self.mocks.repository_url.return_value = event.repository.url
 
-                self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler.handle(body))
+                self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler._do_handle(body))
                 self.email_service.sendemail.assert_called_once()
 
                 email = self.handler.get_commit_email(event, event.commits[0], False)
