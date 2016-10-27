@@ -52,7 +52,7 @@ class GithubJenkinsTriggerHandler(AbstractGithubHandler):
         return services.get(JenkinsService)
 
     def _do_handle(self, payload_body):
-        log.info('GithubStorePullRequestHandler.handle')
+        log.info('GithubJenkinsTriggerHandler.handle')
         for instance in self.jenkins_instances:
             log.debug('Forwarding payload to %s', instance)
             try:
@@ -63,7 +63,7 @@ class GithubJenkinsTriggerHandler(AbstractGithubHandler):
                     {
                         GithubHook.payloadHeader: 'push'
                     })
-                return 200, 'OK'
             except Exception, e:
                 log.warn("Failed to trigger job on %s: %s", instance, e)
                 return 500, 'KO'
+        return 200, 'OK'
