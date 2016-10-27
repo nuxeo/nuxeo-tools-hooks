@@ -39,6 +39,7 @@ setup(
         'PyGithub==1.28',
         'slackclient==1.0.2',
         'jira==1.0.7',
+        'jenkinsapi==0.3.3',
         'Jinja2==2.8',
         'Unidecode==0.4.19',
         'mongoengine==0.10.6',
