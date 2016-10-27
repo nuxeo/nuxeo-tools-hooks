@@ -29,7 +29,10 @@ class AbstractGithubHandler(object):
         self.__config_section = type(self).__name__
 
     def handle(self, payload_body):
-        return self._do_handle(payload_body)
+        if services.get(Config).getboolean(self.config_section, 'active', True):
+            return self._do_handle(payload_body)
+        else:
+            return 204, "Disabled"
 
     @abstractmethod
     def _do_handle(self, json_payload_body):
@@ -51,5 +54,5 @@ class AbstractGithubJsonHandler(AbstractGithubHandler):
     __metaclass__ = ABCMeta
 
     def handle(self, payload_body):
-        return self._do_handle(json.loads(payload_body))
+        return AbstractGithubHandler.handle(self, json.loads(payload_body))
 
