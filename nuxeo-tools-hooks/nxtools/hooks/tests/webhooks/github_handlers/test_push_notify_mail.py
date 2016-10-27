@@ -26,6 +26,7 @@ from multiprocessing import Process
 from mock.mock import Mock, patch
 
 from nxtools import services
+from nxtools.hooks.endpoints.webhook.github_hook import InvalidPayloadException
 from nxtools.hooks.entities.github_entities import PushEvent
 from nxtools.hooks.entities.github_entities import RepositoryWrapper
 from nxtools.hooks.services.config import Config
@@ -84,6 +85,10 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
         :rtype: nxtools.hooks.services.config.Config
         """
         return services.get(Config)
+
+    def test_invalid_payload(self):
+        with self.assertRaises(InvalidPayloadException):
+            self.handler.get_branch_short_name(self.get_event_from_body("{}"))
 
     def test_bad_branch_payload(self):
         with GithubHookHandlerTest.payload_file('github_push') as payload:
