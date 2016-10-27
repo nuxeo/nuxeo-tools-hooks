@@ -47,7 +47,7 @@ class Config(object):
     def get_env_key_name(key, section=None):
         key = key.upper()
         if section and section != "general":
-            key = section.replace("Service", "_").upper() + key
+            key = section.replace("Service", "").upper() + "_" + key
         return Config.ENV_PREFIX + key
 
     def __init__(self):
