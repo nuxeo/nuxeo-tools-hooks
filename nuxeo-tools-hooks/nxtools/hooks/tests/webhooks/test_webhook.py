@@ -23,7 +23,7 @@ from flask.app import Flask
 from mock.mock import patch
 from nxtools import services
 from nxtools.hooks.endpoints.webhook import WebHookEndpoint, NoSuchHookException
-from nxtools.hooks.endpoints.webhook.github_hook import GithubHook, UnhandledGithubEvent, InvalidPayloadException
+from nxtools.hooks.endpoints.webhook.github_hook import GithubHook, UnhandledGithubEvent
 from nxtools.hooks.tests.webhooks import WebHooksTestCase
 
 
@@ -60,20 +60,3 @@ class WebhooksTest(WebHooksTestCase):
         hook = GithubHook()
         with self.assertRaises(UnhandledGithubEvent):
             hook.handle({GithubHook.payloadHeader: "Unknown"}, "{}")
-
-        with self.assertRaises(InvalidPayloadException):
-            hook.handle({GithubHook.payloadHeader: "push"}, "{}")
-
-        # def testIssueComment(self):
-    #     GithubHook.add_handler("issue_comment", GithubReviewHandler(self.handler))
-    #
-    #     self.mocks.commit.get_statuses.return_value = [
-    #         Mock(state="success", raw_data={"context": "review/nuxeo"})
-    #     ]
-    #     self.mocks.pull_request.get_commits.return_value = Mock(reversed=[self.mocks.commit])
-    #     self.mocks.repository.get_pull.return_value = self.mocks.pull_request
-    #     self.mocks.organization.get_repo.return_value = self.mocks.repository
-    #
-    #     with GithubHandlerTest.payload_file('github_issue_comment') as payload:
-    #         body, headers = payload
-    #         self.handler.handle(headers, body)
