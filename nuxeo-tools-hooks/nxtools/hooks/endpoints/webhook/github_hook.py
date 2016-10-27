@@ -19,12 +19,13 @@ Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
 """
 
-import json
 import pkgutil
 import sys
 import types
 
-from github.MainClass import Github
+import logging
+
+import re
 from github.GithubException import UnknownObjectException
 from io import StringIO
 from nxtools import services, ServiceContainer
@@ -33,6 +34,8 @@ from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubHandle
 from nxtools.hooks.entities.github_entities import OrganizationWrapper
 from nxtools.hooks.services.config import Config
 from nxtools.hooks.services.github_service import NoSuchOrganizationException, GithubService
+
+log = logging.getLogger(__name__)
 
 
 class UnhandledGithubEvent(Exception):
@@ -99,6 +102,12 @@ class GithubHook(AbstractWebHook):
         """
 
         if GithubHook.payloadHeader in headers:
+            repository_name = None
+            regexp = r'.*"full_name": "([^"]*)"'
+            if re.match(regexp, body, re.S):
+                repository_name = (re.findall(regexp, body, re.S) or [None])[0]
+            log.info('Got a payload %s - %s', repository_name, headers[GithubHook.payloadHeader])
+
             handlers = [handler for handler in self.handlers if handler.can_handle(headers, body)]
 
             if handlers:
