@@ -55,6 +55,11 @@ python setup.py sdist'''
         sh "docker tag ${image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${commit_id}"
         sh "docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${commit_id}"
 
+        logstash_image = docker.build('nuxeo/nuxeo-tools-hooks-logstash', 'docker/logstash')
+
+        sh "docker tag ${logstash_image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks-logstash:${env.BRANCH_NAME}"
+        sh "docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks-logstash:${env.BRANCH_NAME}"
+
         step([$class: 'ArtifactArchiver', allowEmptyArchive: true, artifacts: 'dist/*.tar.gz', excludes: null, fingerprint: true, onlyIfSuccessful: true])
         step([$class: 'JiraIssueUpdater', issueSelector: [$class: 'DefaultIssueSelector'], scm: scm])
         step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'ci/qa.nuxeo.com'], statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: 'Building on Nuxeo CI', state: 'SUCCESS']]]])
