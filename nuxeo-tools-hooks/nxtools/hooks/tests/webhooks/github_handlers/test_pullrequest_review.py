@@ -22,7 +22,7 @@ import json
 from github.Commit import Commit
 from github.CommitStatus import CommitStatus
 from github.File import File
-from github.GithubObject import GithubObject
+from github.NamedUser import NamedUser
 from mock.mock import patch
 from nxtools import services
 from nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_review import GithubReviewNotifyHandler, \
@@ -47,7 +47,11 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
         StoredPullRequest.drop_collection()
 
     def mocked_in_members(self, username):
-        return username in ['mguillaume', 'jcarsique', 'efge', 'tmartins']
+        self.assertIsInstance(username, NamedUser)
+        return username.login in ['mguillaume', 'jcarsique', 'efge', 'tmartins']
+
+    def mocked_get_user(self, username):
+        return NamedUser(None, None, {"login": username}, True)
 
     @property
     def handler(self):
@@ -94,27 +98,35 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
         self.assertEqual(59, len([l for l in blame if l == 'efge']))
         self.assertEqual(40, len([l for l in blame if l == 'atchertchian']))
 
-        with patch('nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_review.GithubReviewService.parse_patch',
-                   return_value=deletions), patch(
-            'nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_review.GithubReviewService.parse_blame',
-            return_value=blame), patch('nxtools.hooks.entities.github_entities.RepositoryWrapper.get_blame',
-                                       return_value=None):
+        patchers = [
+            patch('nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_review.GithubReviewService.parse_patch',
+                  return_value=deletions),
+            patch(
+                'nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_review.GithubReviewService.parse_blame',
+                return_value=blame),
+            patch('nxtools.hooks.entities.github_entities.RepositoryWrapper.get_blame', return_value=None),
+            patch('nxtools.hooks.services.github_service.Github.get_user', side_effect=self.mocked_get_user)
+        ]
 
-            self.assertListEqual(['jcarsique', 'efge', 'atchertchian'], review_service.get_owners(event))
+        [patcher.start() for patcher in patchers]
 
-            self.mocks.commits += [Commit(None, None, {
-                "author": {"login": "jcarsique"}
-            }, True), Commit(None, None, {
-                "author": {"login": "efge"}
-            }, True)]
+        self.assertListEqual(['jcarsique', 'efge', 'atchertchian'], review_service.get_owners(event))
 
-            self.assertListEqual(['mguillaume', 'atchertchian', 'tmartins'], review_service.get_owners(event))
+        self.mocks.commits += [Commit(None, None, {
+            "author": {"login": "jcarsique"}
+        }, True), Commit(None, None, {
+            "author": {"login": "efge"}
+        }, True)]
 
-            services.get(Config).set_request_environ({
-                Config.ENV_PREFIX + 'GITHUBREVIEW_REQUIRED_ORGANIZATIONS': 'nuxeo'
-            })
+        self.assertListEqual(['mguillaume', 'atchertchian', 'tmartins'], review_service.get_owners(event))
 
-            self.assertListEqual(['mguillaume', 'tmartins'], review_service.get_owners(event))
+        services.get(Config).set_request_environ({
+            Config.ENV_PREFIX + 'GITHUBREVIEW_REQUIRED_ORGANIZATIONS': 'nuxeo'
+        })
+
+        self.assertListEqual(['mguillaume', 'tmartins'], review_service.get_owners(event))
+
+        [patcher.stop() for patcher in patchers]
 
     def test_review_pull_request(self):
         with GithubHookHandlerTest.payload_file('github_issue_comment') as payload:

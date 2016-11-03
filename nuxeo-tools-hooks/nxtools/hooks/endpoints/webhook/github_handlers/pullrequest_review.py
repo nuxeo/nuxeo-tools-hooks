@@ -132,8 +132,9 @@ class GithubReviewService(AbstractService):
         return [o for o, count in sorted(owners.items(), key=operator.itemgetter(1), reverse=True)
                 if o != 'none' and o != pr_creator and o not in authors and self.has_required_organizations(o)]
 
-    def has_required_organizations(self, user_name):
-        return True in [services.get(GithubService).get_organization(name).has_in_members(user_name)
+    def has_required_organizations(self, login):
+        github = services.get(GithubService)  # type: GithubService
+        return True in [github.get_organization(name).has_in_members(github.get_user(login))
                         for name in self.required_organizations] if self.required_organizations else True
 
     def count_reviews(self, pull_request, last_commit):

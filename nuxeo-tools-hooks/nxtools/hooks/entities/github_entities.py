@@ -17,9 +17,7 @@ Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
 """
 from github import MainClass
-from github.Commit import Commit as BaseCommit
 from github.CommitStatus import CommitStatus as BaseCommitStatus
-from github.GitCommit import GitCommit
 from github.GithubObject import NotSet, NonCompletableGithubObject
 from github.Issue import Issue
 from github.IssueComment import IssueComment
