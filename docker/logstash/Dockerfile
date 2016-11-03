@@ -12,5 +12,5 @@ ADD logstash.conf /opt/logstash/logstash.conf
 
 ENTRYPOINT ["/opt/logstash/logstash/bin/logstash"]
 
-CMD ["-f", "/opt/logstash/logstash.conf", "-v"]
+CMD ["-f", "/opt/logstash/logstash.conf", "-v", "--allow-env"]
 

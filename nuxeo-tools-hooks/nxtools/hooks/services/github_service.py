@@ -76,6 +76,13 @@ class GithubService(AbstractService):
                 raise NoSuchOrganizationException(name)
         return self.__organizations[name]
 
+    def get_user(self, login):
+        try:
+            return Github().get_user(login)
+        except Exception, e:
+            log.warn('Could not fetch user %s', login)
+            raise e
+
     def create_pullrequest(self, organization, repository, pull_request):
 
         stored_pr = StoredPullRequest.objects(
