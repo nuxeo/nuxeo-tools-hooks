@@ -67,3 +67,21 @@ class HTTPTest(HooksTestCase):
         self.assertEqual(response, fake_response)
         self.assertEqual(fake_response, response2)
         self.assertEqual(response.read(), response2.read())
+
+    def test_http_noetag(self):
+        cnx = CachingHTTPConnection('mocked.lan', 80)
+
+        cnx.connect()
+        cnx.request('GET', '/test', 'Lorem Ipsum', {'X-HEADER': 'value'})
+
+        self.mocks.http_getresponse.return_value = HTTPResponse(None)
+        self.mocks.httpresponse_read.return_value = "Mocked Response"
+
+        response1 = cnx.getresponse()
+
+        cnx.request('GET', '/test', 'Lorem Ipsum', {'X-HEADER': 'value'})
+        self.mocks.http_getresponse.return_value = HTTPResponse(None)
+        self.mocks.httpresponse_read.return_value = "Mocked Response"
+
+        response2 = cnx.getresponse()
+        self.assertNotEquals(response1, response2)

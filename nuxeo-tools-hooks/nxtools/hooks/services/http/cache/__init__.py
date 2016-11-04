@@ -18,7 +18,6 @@ Contributors:
 """
 
 import logging
-
 from abc import ABCMeta, abstractmethod
 
 from geventhttpclient.httplib import HTTPConnection, HTTPSConnection
@@ -64,8 +63,9 @@ class CachingHTTPMixin(object):
         if cache.has(*self._cached_key):
             self._cached_response = cache.get(*self._cached_key)
 
-            if CachingHTTPMixin.HEADER_ETAG_REQUEST.lower() not in [h.lower() for h in headers] \
-                    or CachingHTTPMixin.HEADER_LAST_MODIFIED_REQUEST.lower() not in [h.lower() for h in headers]:
+            if (CachingHTTPMixin.HEADER_ETAG_REQUEST.lower() not in [h.lower() for h in headers]
+                    or CachingHTTPMixin.HEADER_LAST_MODIFIED_REQUEST.lower() not in [h.lower() for h in headers]) \
+                    and CachingHTTPMixin.HEADER_ETAG_RESPONSE in self._cached_response:
                 headers[CachingHTTPMixin.HEADER_ETAG_REQUEST] = \
                     self._cached_response[CachingHTTPMixin.HEADER_ETAG_RESPONSE]
         else:
@@ -129,6 +129,9 @@ class CachableHTTPResponse(object):
             object.__setattr__(self, name, value)
         else:
             object.__setattr__(self._wrappee, name, value)
+
+    def __contains__(self, key):
+        return key in self._wrappee
 
     def __getitem__(self, item):
         return self._wrappee[item]
