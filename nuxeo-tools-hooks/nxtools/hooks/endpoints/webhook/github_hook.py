@@ -19,13 +19,12 @@ Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
 """
 
+import json
+import logging
 import pkgutil
 import sys
 import types
 
-import logging
-
-import re
 from github.GithubException import UnknownObjectException
 from io import StringIO
 from nxtools import services, ServiceContainer
@@ -103,9 +102,10 @@ class GithubHook(AbstractWebHook):
 
         if GithubHook.payloadHeader in headers:
             repository_name = None
-            regexp = r'.*"full_name": "([^"]*)"'
-            if re.match(regexp, body, re.S):
-                repository_name = (re.findall(regexp, body, re.S) or [None])[0]
+
+            json_body = json.loads(body)
+            if 'repository' in json_body and 'html_url' in json_body['repository']:
+                repository_name = json_body['repository']['html_url']
             log.info('Got a payload %s - %s', repository_name, headers[GithubHook.payloadHeader])
 
             handlers = [handler for handler in self.handlers if handler.can_handle(headers, body)]
