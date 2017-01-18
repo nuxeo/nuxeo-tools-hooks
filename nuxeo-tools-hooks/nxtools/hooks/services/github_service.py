@@ -20,11 +20,12 @@ Contributors:
 from httplib import HTTPException
 from operator import itemgetter
 
-import logging
 import gevent
-import re
-
 import json
+import logging
+import re
+import socket
+
 from github.GithubException import UnknownObjectException, GithubException
 from github.Hook import Hook
 from github.MainClass import Github
@@ -114,7 +115,10 @@ class GithubService(AbstractService):
             pullrequest = repository.get_pull(stored_pullrequest.pull_number)
             head_commit = repository.get_commit(pullrequest.head.sha)
             jira_key = jira.get_issue_id_from_branch(stored_pullrequest.branch)
-            jira_issue = jira.get_issue(jira_key)
+            jira_issue = jira.get_issue(jira_key) if jira_key is not None else None
+
+            if jira_key is None:
+                log.info('get_pullrequest: Could not parse JIRA key for %s/%s/pull/%d', organization.login, repository.name, pullrequest.number)
 
             return {
                 'additions': pullrequest.additions,
@@ -135,7 +139,7 @@ class GithubService(AbstractService):
                 'id': pullrequest.id,
                 'issue_url': pullrequest.issue_url,
                 'jira_key': jira_key,
-                'jira_summary': jira_issue.fields.summary,
+                'jira_summary': jira_issue.fields.summary if jira_key is not None else None,
                 'merge_commit_sha': pullrequest.merge_commit_sha,
                 'mergeable': pullrequest.mergeable,
                 'mergeable_state': pullrequest.mergeable_state,
@@ -169,7 +173,7 @@ class GithubService(AbstractService):
                 'url': pullrequest.url,
                 'user': pullrequest.user.login
             }
-        except (JIRAError, GithubException, HTTPException), e:
+        except (JIRAError, GithubException, HTTPException, socket.error), e:
             log.warn('list_pull_requests: Failed to fetch data of %s/%s/pull/%s: %s',
                      stored_pullrequest.organization, stored_pullrequest.repository, stored_pullrequest.pull_number, e)
             return None
@@ -187,7 +191,7 @@ class GithubService(AbstractService):
                             StoredPullRequest.objects()])
         except OperationError, e:
             log.warn('list_pull_requests: Failed to fetch data from database: %s', e)
-            raise Exception(e)
+            raise e
 
         return sorted(pullrequests, key=itemgetter('created_at'))
 
