@@ -103,10 +103,13 @@ class GithubHook(AbstractWebHook):
         if GithubHook.payloadHeader in headers:
             repository_name = None
 
-            json_body = json.loads(body)
-            if 'repository' in json_body and 'html_url' in json_body['repository']:
-                repository_name = json_body['repository']['html_url']
-            log.info('Got a payload %s - %s', repository_name, headers[GithubHook.payloadHeader])
+            try:
+                json_body = json.loads(body)
+                if 'repository' in json_body and 'html_url' in json_body['repository']:
+                    repository_name = json_body['repository']['html_url']
+                log.info('Got a payload %s - %s', repository_name, headers[GithubHook.payloadHeader])
+            except ValueError, e:
+                log.warn(e.message)
 
             handlers = [handler for handler in self.handlers if handler.can_handle(headers, body)]
 
