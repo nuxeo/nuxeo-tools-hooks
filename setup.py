@@ -45,6 +45,7 @@ setup(
         'mongoengine==0.10.6',
         'gevent==1.1.2',
         'geventhttpclient==1.3.1',
+        'logmatic-python==0.1.6',
         'paramiko==2.0.2'
     ]
 )

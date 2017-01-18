@@ -10,4 +10,6 @@ COPY dist /opt/dist
 
 RUN pip install --upgrade /opt/dist/nuxeo-tools-hooks-*.tar.gz
 
+CMD ["python", "-m", "nxtools.hooks.app"]
+
 EXPOSE 8888
