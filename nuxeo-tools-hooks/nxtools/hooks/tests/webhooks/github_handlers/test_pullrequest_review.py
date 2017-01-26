@@ -93,10 +93,10 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
 
         self.assertEqual(3, len(deletions))
 
-        self.assertEqual(1408, len([l for l in blame if l == 'jcarsique']))
-        self.assertEqual(105, len([l for l in blame if l == 'mguillaume']))
-        self.assertEqual(59, len([l for l in blame if l == 'efge']))
-        self.assertEqual(40, len([l for l in blame if l == 'atchertchian']))
+        self.assertEqual(717, len([l for l in blame if l == 'jcarsique']))
+        self.assertEqual(53, len([l for l in blame if l == 'mguillaume']))
+        self.assertEqual(7, len([l for l in blame if l == 'efge']))
+        self.assertEqual(16, len([l for l in blame if l == 'atchertchian']))
 
         patchers = [
             patch('nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_review.GithubReviewService.parse_patch',
@@ -110,7 +110,7 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
 
         [patcher.start() for patcher in patchers]
 
-        self.assertListEqual(['jcarsique', 'efge', 'atchertchian'], review_service.get_owners(event))
+        self.assertListEqual(['jcarsique', 'mguillaume', 'atchertchian'], review_service.get_owners(event))
 
         self.mocks.commits += [Commit(None, None, {
             "author": {"login": "jcarsique"}

@@ -70,7 +70,7 @@ class GithubReviewService(AbstractService):
         currentAuthor = 'none'
         lines = []
 
-        for match in re.findall(r"(rel=\"(?:author|contributor)\">([^<]+)</a> authored|<tr class=\"blame-line\">)",
+        for match in re.findall(r'(<img alt="@([^"]+)" class="avatar blame-commit-avatar"|<td class="blame-commit-info")',
                                 blame, re.M):
             if match[1]:
                 currentAuthor = match[1]
