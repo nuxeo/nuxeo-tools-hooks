@@ -187,14 +187,13 @@ class GithubReviewService(AbstractService):
                        unfurl_links=False,
                        attachments=[
                            {
-                               "fallback": "%s (%s) has created %s/%s PR #%d: %s. Potential reviewers: %s" % (
+                               "fallback": "%s (%s) has created %s/%s PR #%d: %s" % (
                                    event.pull_request.user.login,
                                    event.pull_request.user.html_url,
                                    event.organization.login,
                                    event.repository.name,
                                    event.pull_request.number,
                                    event.pull_request.title,
-                                   reviewers
                                ),
                                "color": "good",
                                "author_name": event.pull_request.user.login,
@@ -205,7 +204,7 @@ class GithubReviewService(AbstractService):
                                    event.pull_request.number,
                                    event.pull_request.title),
                                "title_link": event.pull_request.html_url,
-                               "text": "Needs 2 review to merge. Potential reviewers: " + reviewers
+                               "text": "Needs 2 review to merge."
                            }
                        ])
 
@@ -298,9 +297,10 @@ class GithubReviewNotifyHandler(AbstractGithubJsonHandler):
                 review_service.set_review_status(repository, pull_request, last_commit)
 
             if event.action == 'opened':
-                owners = review_service.get_owners(event)
+                # owners = review_service.get_owners(event)
+                owners = []
                 review_service.slack_notify(event, owners)
-                review_service.github_comment(event, owners)
+                # review_service.github_comment(event, owners)
 
         return 200, 'OK'
 
