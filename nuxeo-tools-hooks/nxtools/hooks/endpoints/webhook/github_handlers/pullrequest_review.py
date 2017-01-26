@@ -174,7 +174,7 @@ class GithubReviewService(AbstractService):
             context=self.review_context)
 
     def slack_notify(self, event, owners):
-        reviewers = ", ".join(["@" + o for o in owners])
+        reviewers = " ".join(["@" + o for o in owners])
         slack = SlackClient(self.slack_token)
 
         log.info('Sending slack notification for %s/%s/pull/%d in %s',
