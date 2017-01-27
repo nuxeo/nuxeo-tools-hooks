@@ -25,9 +25,11 @@ from github.Commit import Commit
 from github.File import File
 from github.IssueComment import IssueComment
 from github.PullRequest import PullRequest
+from lxml.html import html5parser, XHTML_NAMESPACE
+from lxml.etree import LxmlError
 from nxtools import ServiceContainer, services
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubJsonHandler
-from nxtools.hooks.endpoints.webhook.github_hook import AbstractGithubHandler, GithubHook
+from nxtools.hooks.endpoints.webhook.github_hook import GithubHook
 from nxtools.hooks.entities.github_entities import PullRequestEvent, RepositoryWrapper, IssueCommentEvent
 from nxtools.hooks.services import AbstractService
 from nxtools.hooks.services.github_service import GithubService
@@ -67,15 +69,46 @@ class GithubReviewService(AbstractService):
         return deleted_lines
 
     def parse_blame(self, blame):
-        currentAuthor = 'none'
+        currentAuthor = None
         lines = []
 
-        for match in re.findall(r'(<img alt="@([^"]+)" class="avatar blame-commit-avatar"|<td class="blame-commit-info")',
-                                blame, re.M):
-            if match[1]:
-                currentAuthor = match[1]
+        try:
+            hunks = html5parser.fromstring(blame).xpath('//html:tbody[@class="blame-hunk"]',
+                                                        namespaces={'html': XHTML_NAMESPACE})
+            if not hunks:
+                log.warning('No blame hunks found')
             else:
-                lines.append(currentAuthor)
+                for hunk_index, hunk in enumerate(hunks):
+                    currentAuthor = (hunk.xpath(
+                        'html:tr//html:a[html:img[contains(@class, "blame-commit-avatar")]]/@aria-label',
+                        namespaces={'html': XHTML_NAMESPACE}) or [None])[0]
+
+                    if currentAuthor:
+                        log.debug('Hunk #%d author: %s', hunk_index, currentAuthor)
+                    else:
+                        currentAuthor = 'none'
+                        log.warning('Hunk #%d no author found', hunk_index)
+
+                    hunk_lines = hunk.xpath(
+                        'html:tr[contains(@class, "blame-line")]/html:td[contains(@class, "blob-num")]/@id',
+                        namespaces={'html': XHTML_NAMESPACE})
+
+                    log.debug('Hunk #%d lines: %s', hunk_index, hunk_lines)
+
+                    if not hunk_lines:
+                        log.warning('Hunk #%d no lines found', hunk_index)
+                    else:
+                        for _ in hunk_lines:
+                            lines.append(currentAuthor)
+        except LxmlError, e:
+            log.warning('Could not parse blame page: %s', e)
+
+        # for match in re.findall(r'(<img alt="@([^"]+)" class="avatar blame-commit-avatar"|<td class="blame-commit-info")',
+        #                         blame, re.M):
+        #     if match[1]:
+        #         currentAuthor = match[1]
+        #     else:
+        #         lines.append(currentAuthor)
 
         return lines
 

@@ -46,6 +46,8 @@ setup(
         'gevent==1.1.2',
         'geventhttpclient==1.3.1',
         'logmatic-python==0.1.6',
-        'paramiko==2.0.2'
+        'paramiko==2.0.2',
+        'lxml==3.7.2',
+        'html5lib==0.999999999',
     ]
 )
