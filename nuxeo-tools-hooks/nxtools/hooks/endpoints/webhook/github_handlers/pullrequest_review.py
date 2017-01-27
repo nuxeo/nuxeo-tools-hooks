@@ -103,13 +103,6 @@ class GithubReviewService(AbstractService):
         except LxmlError, e:
             log.warning('Could not parse blame page: %s', e)
 
-        # for match in re.findall(r'(<img alt="@([^"]+)" class="avatar blame-commit-avatar"|<td class="blame-commit-info")',
-        #                         blame, re.M):
-        #     if match[1]:
-        #         currentAuthor = match[1]
-        #     else:
-        #         lines.append(currentAuthor)
-
         return lines
 
     def get_owners(self, event):
@@ -220,13 +213,14 @@ class GithubReviewService(AbstractService):
                        unfurl_links=False,
                        attachments=[
                            {
-                               "fallback": "%s (%s) has created %s/%s PR #%d: %s" % (
+                               "fallback": "%s (%s) has created %s/%s PR #%d: %s. Potential reviewers: %s" % (
                                    event.pull_request.user.login,
                                    event.pull_request.user.html_url,
                                    event.organization.login,
                                    event.repository.name,
                                    event.pull_request.number,
                                    event.pull_request.title,
+                                   reviewers
                                ),
                                "color": "good",
                                "author_name": event.pull_request.user.login,
@@ -237,7 +231,7 @@ class GithubReviewService(AbstractService):
                                    event.pull_request.number,
                                    event.pull_request.title),
                                "title_link": event.pull_request.html_url,
-                               "text": "Needs 2 review to merge."
+                               "text": "Needs 2 review to merge. Potential reviewers: " + reviewers
                            }
                        ])
 
@@ -330,10 +324,9 @@ class GithubReviewNotifyHandler(AbstractGithubJsonHandler):
                 review_service.set_review_status(repository, pull_request, last_commit)
 
             if event.action == 'opened':
-                # owners = review_service.get_owners(event)
-                owners = []
+                owners = review_service.get_owners(event)
                 review_service.slack_notify(event, owners)
-                # review_service.github_comment(event, owners)
+                review_service.github_comment(event, owners)
 
         return 200, 'OK'
 
