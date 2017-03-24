@@ -1,5 +1,6 @@
 #!/bin/bash -ex
 
+pip uninstall -y nuxeo-tools-hooks
 pip install -r /opt/dev-requirements.txt
 pip install -e /opt
 

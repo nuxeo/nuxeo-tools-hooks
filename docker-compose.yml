@@ -17,6 +17,7 @@ services:
     links:
       - mongo
     environment:
+      - PYTHONPATH=/opt/nuxeo-tools-hooks
       - NXTOOLS_HOOKS_CONF=/opt/conf/nuxeo-tools-hooks.ini
 #      - NXTOOLS_HOOKS_LOGGING_CONFIG_FILE=/opt/conf/log.ini
 #      - NXTOOLS_HOOKS_DATABASE_CONNECTION_URL=mongodb://mongo/nxtools-hooks
