@@ -73,14 +73,14 @@ class GithubReviewService(AbstractService):
         lines = []
 
         try:
-            hunks = html5parser.fromstring(blame).xpath('//html:tbody[@class="blame-hunk"]',
+            hunks = html5parser.fromstring(blame).xpath('//html:div[contains(@class, "blame-hunk")]',
                                                         namespaces={'html': XHTML_NAMESPACE})
             if not hunks:
                 log.warning('No blame hunks found')
             else:
                 for hunk_index, hunk in enumerate(hunks):
                     currentAuthor = (hunk.xpath(
-                        'html:tr//html:a[html:img[contains(@class, "blame-commit-avatar")]]/@aria-label',
+                        'html:div//html:a[html:img[contains(@class, "blame-commit-avatar")]]/@aria-label',
                         namespaces={'html': XHTML_NAMESPACE}) or [None])[0]
 
                     if currentAuthor:
@@ -90,7 +90,7 @@ class GithubReviewService(AbstractService):
                         log.warning('Hunk #%d no author found', hunk_index)
 
                     hunk_lines = hunk.xpath(
-                        'html:tr[contains(@class, "blame-line")]/html:td[contains(@class, "blob-num")]/@id',
+                        'html:div[@class="width-full"]/html:div[contains(@class, "d-flex")]/html:div[contains(@class, "blob-num")]/@id',
                         namespaces={'html': XHTML_NAMESPACE})
 
                     log.debug('Hunk #%d lines: %s', hunk_index, hunk_lines)

@@ -44,7 +44,7 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
     def tearDown(self):
         super(GithubReviewPullRequestHandlerTest, self).tearDown()
 
-        StoredPullRequest.drop_collection()
+        # StoredPullRequest.drop_collection()
 
     def mocked_in_members(self, username):
         self.assertIsInstance(username, NamedUser)
@@ -95,7 +95,7 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
 
         self.assertEqual(1614, len([l for l in blame if l == 'jcarsique']))
         self.assertEqual(127, len([l for l in blame if l == 'mguillaume']))
-        self.assertEqual(67, len([l for l in blame if l == 'efge']))
+        self.assertEqual(50, len([l for l in blame if l == 'efge']))
         self.assertEqual(46, len([l for l in blame if l == 'atchertchian']))
 
         patchers = [
@@ -118,7 +118,7 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
             "author": {"login": "efge"}
         }, True)]
 
-        self.assertListEqual(['mguillaume', 'atchertchian', 'tmartins'], review_service.get_owners(event))
+        self.assertListEqual(['mguillaume', 'atchertchian', 'nxmatic'], review_service.get_owners(event))
 
         services.get(Config).set_request_environ({
             Config.ENV_PREFIX + 'GITHUBREVIEW_REQUIRED_ORGANIZATIONS': 'nuxeo'
