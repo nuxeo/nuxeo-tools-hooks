@@ -25,8 +25,7 @@ from github.File import File
 from github.NamedUser import NamedUser
 from mock.mock import patch
 from nxtools import services
-from nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_review import GithubReviewNotifyHandler, \
-    GithubReviewService, GithubReviewCommentHandler
+from nxtools.hooks.endpoints.webhook.github_handlers.pull_request import GithubReviewService, GithubReviewCommentHandler
 from nxtools.hooks.entities.db_entities import StoredPullRequest
 from nxtools.hooks.entities.github_entities import PullRequestEvent, IssueCommentEvent
 from nxtools.hooks.services.config import Config
@@ -52,13 +51,6 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
 
     def mocked_get_user(self, username):
         return NamedUser(None, None, {"login": username}, True)
-
-    @property
-    def handler(self):
-        """
-        :rtype: nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_review.GithubReviewNotifyHandler
-        """
-        return services.get(GithubReviewNotifyHandler)
 
     def test_open_pull_request(self):
         with GithubHookHandlerTest.payload_file('github_pullrequest_open') as payload:
@@ -99,10 +91,10 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
         self.assertEqual(46, len([l for l in blame if l == 'atchertchian']))
 
         patchers = [
-            patch('nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_review.GithubReviewService.parse_patch',
+            patch('nxtools.hooks.endpoints.webhook.github_handlers.pull_request.GithubReviewService.parse_patch',
                   return_value=deletions),
             patch(
-                'nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_review.GithubReviewService.parse_blame',
+                'nxtools.hooks.endpoints.webhook.github_handlers.pull_request.GithubReviewService.parse_blame',
                 return_value=blame),
             patch('nxtools.hooks.entities.github_entities.RepositoryWrapper.get_blame', return_value=None),
             patch('nxtools.hooks.services.github_service.Github.get_user', side_effect=self.mocked_get_user)

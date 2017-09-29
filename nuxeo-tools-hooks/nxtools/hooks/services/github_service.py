@@ -24,20 +24,28 @@ import gevent
 import json
 import logging
 import re
+import operator
 import socket
 
 from github.GithubException import UnknownObjectException, GithubException
+from github.Commit import Commit
+from github.File import File
 from github.Hook import Hook
+from github.PullRequest import PullRequest
+from github.IssueComment import IssueComment
 from github.MainClass import Github
 from github.Organization import Organization
 from github.Repository import Repository
 from jira.exceptions import JIRAError
+from lxml.html import html5parser, XHTML_NAMESPACE
+from lxml.etree import LxmlError
 from mongoengine.errors import OperationError
 from nxtools import ServiceContainer, services
 from nxtools.hooks.entities.db_entities import StoredPullRequest
-from nxtools.hooks.entities.github_entities import OrganizationWrapper
+from nxtools.hooks.entities.github_entities import OrganizationWrapper, RepositoryWrapper
 from nxtools.hooks.services import AbstractService
 from nxtools.hooks.services.jira_service import JiraService
+from slackclient import SlackClient
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +57,6 @@ class NoSuchOrganizationException(Exception):
 
 @ServiceContainer.service
 class GithubService(AbstractService):
-
     CONFIG_OAUTH_PREFIX = "oauth_token_"
 
     def __init__(self):
@@ -118,7 +125,8 @@ class GithubService(AbstractService):
             jira_issue = jira.get_issue(jira_key) if jira_key is not None else None
 
             if jira_key is None:
-                log.info('get_pullrequest: Could not parse JIRA key for %s/%s/pull/%d', organization.login, repository.name, pullrequest.number)
+                log.info('get_pullrequest: Could not parse JIRA key for %s/%s/pull/%d', organization.login,
+                         repository.name, pullrequest.number)
 
             return {
                 'additions': pullrequest.additions,
@@ -150,22 +158,22 @@ class GithubService(AbstractService):
                 'number': pullrequest.number,
                 'organization': organization.login,
                 'other_statuses': [{
-                                       'state': status.state,
-                                       'description': status.description,
-                                       'target': status.target_url,
-                                       'context': status.context
-                                   } for status in head_commit.get_statuses()
-                                   if not status.context.startswith("code-review/")],
+                    'state': status.state,
+                    'description': status.description,
+                    'target': status.target_url,
+                    'context': status.context
+                } for status in head_commit.get_statuses()
+                    if not status.context.startswith("code-review/")],
                 'patch_url': pullrequest.patch_url,
                 'review_comment_url': pullrequest.review_comment_url,
                 'review_comments': pullrequest.review_comments,
                 'review_status': ([{
-                                      'state': status.state,
-                                      'description': status.description,
-                                      'target': status.target_url,
-                                      'context': status.context
-                                  } for status in head_commit.get_statuses()
-                                  if status.context.startswith("code-review/")] or [None])[0],
+                    'state': status.state,
+                    'description': status.description,
+                    'target': status.target_url,
+                    'context': status.context
+                } for status in head_commit.get_statuses()
+                                      if status.context.startswith("code-review/")] or [None])[0],
                 'repository': repository.name,
                 'state': pullrequest.state,
                 'title': pullrequest.title,
@@ -214,7 +222,7 @@ class GithubService(AbstractService):
 
                 gevent.joinall([gevent.spawn(
                     lambda pr: self.create_pullrequest(repository.organization, repository, pr), pullrequest)
-                                for pullrequest in opened_pulls])
+                    for pullrequest in opened_pulls])
 
                 uncertain_pulls = StoredPullRequest.objects(
                     organization=organization_name,
@@ -223,7 +231,8 @@ class GithubService(AbstractService):
 
                 if uncertain_pulls:
                     log.info('No intel fetched for %s/%s pull requests: %s',
-                             organization_name, repository_name, ", ".join([str(pull.pull_number) for pull in uncertain_pulls]))
+                             organization_name, repository_name,
+                             ", ".join([str(pull.pull_number) for pull in uncertain_pulls]))
 
                     for stored_pull in uncertain_pulls:
                         log.info('Checking status of %s/%s/pull/%d',
@@ -247,7 +256,7 @@ class GithubService(AbstractService):
 
                 gevent.joinall([gevent.spawn(
                     lambda repo: self.sync_repository_pullrequests(repo), repository)
-                                for repository in organization.get_repos()])
+                    for repository in organization.get_repos()])
 
             except (HTTPException, GithubException, NoSuchOrganizationException), e:
                 log.warn('sync_pull_requests: Failed to fetch repositories of %s: %s', organization_name, e)
@@ -287,7 +296,6 @@ class GithubService(AbstractService):
                     if hook.name in hooks_config['absent'] \
                             or 'url' in hook.config and hook.config['url'] in [h['url'] for h in hooks_config['absent']
                                                                                if type(h) is dict and 'url' in h]:
-
                         log.debug('Deleting %s: %s', hook.url, self.json_encode_hook(hook))
                         hook.delete()
                         hooks.remove(hook)
@@ -306,3 +314,261 @@ class GithubService(AbstractService):
         except (HTTPException, GithubException, NoSuchOrganizationException), e:
             log.warn('setup_webhooks: Failed setup webhooks of %s/%s: %s', organization_name, repository_name, e)
             raise Exception(e)
+
+
+@ServiceContainer.service
+class GithubReviewService(AbstractService):
+    pending_status = "pending"
+
+    success_status = "success"
+
+    def parse_patch(self, patch):
+        deleted_lines = []
+        current_from_line = 0
+
+        if patch:
+            for line in patch.splitlines():
+                if line.startswith('@@'):
+                    matches = re.match(r"@@ -([0-9]+),?([0-9]+)? \+([0-9]+),?([0-9]+)? @@", line)
+                    if matches is not None:
+                        from_line = int(matches.group(1))
+                        # from_count = int(matches.group(2))
+                        # to_line = int(matches.group(3))
+                        # to_count = int(matches.group(4))
+
+                        current_from_line = from_line
+                    continue
+                if line.startswith('-'):
+                    deleted_lines.append(current_from_line)
+                if not line.startswith('+'):
+                    current_from_line += 1
+
+        return deleted_lines
+
+    def parse_blame(self, blame):
+        currentAuthor = None
+        lines = []
+
+        try:
+            hunks = html5parser.fromstring(blame).xpath('//html:div[contains(@class, "blame-hunk")]',
+                                                        namespaces={'html': XHTML_NAMESPACE})
+            if not hunks:
+                log.warning('No blame hunks found')
+            else:
+                for hunk_index, hunk in enumerate(hunks):
+                    currentAuthor = (hunk.xpath(
+                        './/html:a[html:img[contains(@class, "blame-commit-avatar")]]/@aria-label',
+                        namespaces={'html': XHTML_NAMESPACE}) or [None])[0]
+
+                    if currentAuthor:
+                        log.debug('Hunk #%d author: %s', hunk_index, currentAuthor)
+                    else:
+                        currentAuthor = 'none'
+                        log.warning('Hunk #%d no author found', hunk_index)
+
+                    hunk_lines = hunk.xpath('.//html:div[contains(@class, "blob-num")]/@id',
+                                            namespaces={'html': XHTML_NAMESPACE})
+
+                    log.debug('Hunk #%d lines: %s', hunk_index, hunk_lines)
+
+                    if not hunk_lines:
+                        log.warning('Hunk #%d no lines found', hunk_index)
+                    else:
+                        for _ in hunk_lines:
+                            lines.append(currentAuthor)
+        except LxmlError, e:
+            log.warning('Could not parse blame page: %s', e)
+
+        return lines
+
+    def get_owners(self, event):
+        files = []
+        deletion_owners = {}
+        all_owners = {}
+
+        repository = services.get(GithubService).get_organization(event.organization.login). \
+            get_repo(event.repository.name)  # type: RepositoryWrapper
+
+        pull_request = repository.get_pull(event.pull_request.number)  # type: PullRequest
+        pr_id = '%s/%s/pull/%d' % (event.organization.login, repository.name, pull_request.number)
+
+        log.info('%s: Checking reviewers', pr_id)
+
+        log.debug('%s: Getting & Parsing patch for each files of PR', pr_id)
+        for pr_file in pull_request.get_files():  # type: File
+            if 'modified' == pr_file.status:
+                files.append({'file': pr_file.filename, 'deletions': self.parse_patch(pr_file.patch)})
+
+        files.sort(key=lambda f: len(f['deletions']), reverse=True)
+        files = files[:self.number_checked_files]
+
+        for f in files:
+            log.debug('%s: %s - %d deletions, getting & parsing blame', pr_id, f['file'], len(f['deletions']))
+            blame = self.parse_blame(repository.get_blame(f['file'], event.pull_request.base.sha))
+
+            for name in blame:
+                all_owners[name] = all_owners[name] + 1 if name in all_owners else 1
+
+            for line in f['deletions']:
+                name = blame[line - 1]
+                if name:
+                    deletion_owners[name] = deletion_owners[name] + 1 if name in deletion_owners else 1
+
+        authors = [commit.author.login for commit in pull_request.get_commits() if commit.author is not None]
+        pr_creator = event.pull_request.user.login
+
+        log.debug('%s: deleted_owners: %s', pr_id, deletion_owners)
+        log.debug('%s: all_owners: %s', pr_id, all_owners)
+
+        for owner in deletion_owners:
+            if owner in all_owners:
+                del all_owners[owner]
+
+        owners = [owner for owner in
+                  self.filter_and_sort_owners(deletion_owners, pr_creator, authors)[:1] +
+                  self.filter_and_sort_owners(all_owners, pr_creator, authors)]
+
+        return owners[:self.number_reviewers]
+
+    def filter_and_sort_owners(self, owners, pr_creator, authors):
+        return [o for o, count in sorted(owners.items(), key=operator.itemgetter(1), reverse=True)
+                if o != 'none' and o != pr_creator and o not in authors and self.has_required_organizations(o)]
+
+    def has_required_organizations(self, login):
+        github = services.get(GithubService)  # type: GithubService
+        return True in [github.get_organization(name).has_in_members(github.get_user(login))
+                        for name in self.required_organizations] if self.required_organizations else True
+
+    def count_reviews(self, pull_request, last_commit):
+        """
+         :type pull_request: PullRequest
+         :type last_commit: Commit
+         """
+        reviews = 0
+        for comment in pull_request.get_issue_comments():  # type: IssueComment
+            if comment.created_at > last_commit.commit.author.date and \
+                            comment.body.strip() in self.mark_reviewed_comment and \
+                    self.has_required_organizations(comment.user.login):
+                reviews += 1
+
+        return reviews
+
+    def set_review_status(self, repository, pull_request, last_commit):
+        """
+         :type repository: github.Repository.Repository
+         :type pull_request: github.PullRequest.PullRequest
+         :type last_commit: github.Commit.Commit
+         """
+        reviews_count = self.count_reviews(pull_request, last_commit)
+
+        status = self.success_status if reviews_count >= self.required_reviews else self.pending_status
+        description = '%d (of %d) reviews' % (reviews_count, self.required_reviews)
+
+        log.info('Setting status of %s/%s/commits/%s to: %s',
+                 repository.organization.login,
+                 repository.name,
+                 last_commit.sha,
+                 description)
+
+        last_commit.create_status(
+            status,
+            description=description,
+            context=self.review_context)
+
+    def slack_notify(self, event, owners):
+        reviewers = " ".join(["@" + o for o in owners])
+        slack = SlackClient(self.slack_token)
+
+        log.info('Sending slack notification for %s/%s/pull/%d in %s',
+                 event.organization.login, event.repository.name, event.pull_request.number, self.slack_channel)
+
+        slack.api_call('chat.postMessage',
+                       channel=self.slack_channel,
+                       username=self.slack_username,
+                       icon_emoji=self.slack_icon,
+                       unfurl_links=False,
+                       attachments=[
+                           {
+                               "fallback": "%s (%s) has created %s/%s PR #%d: %s. Potential reviewers: %s" % (
+                                   event.pull_request.user.login,
+                                   event.pull_request.user.html_url,
+                                   event.organization.login,
+                                   event.repository.name,
+                                   event.pull_request.number,
+                                   event.pull_request.title,
+                                   reviewers
+                               ),
+                               "color": "good",
+                               "author_name": event.pull_request.user.login,
+                               "author_link": event.pull_request.user.html_url,
+                               "title": "%s/%s PR #%d: %s" % (
+                                   event.organization.login,
+                                   event.repository.name,
+                                   event.pull_request.number,
+                                   event.pull_request.title),
+                               "title_link": event.pull_request.html_url,
+                               "text": "Needs 2 review to merge. Potential reviewers: " + reviewers
+                           }
+                       ])
+
+    def github_comment(self, event, owners):
+        reviewers = ", ".join(["@" + o for o in owners])
+
+        repository = services.get(GithubService).get_organization(event.organization.login). \
+            get_repo(event.repository.name)  # type: RepositoryWrapper
+
+        pull_request = repository.get_pull(event.pull_request.number)  # type: PullRequest
+
+        log.info('Notifying potential reviewers with a comment on %s/%s/pull/%d',
+                 event.organization.login, event.repository.name, event.pull_request.number, self.slack_channel)
+
+        pull_request.create_issue_comment("From the blame information on this pull request, potential reviewers: "
+                                          + reviewers)
+
+    @property
+    def activate(self):
+        return self.config('active', False)
+
+    @property
+    def slack_icon(self):
+        return self.config('slack_icon', ':nuxeo:')
+
+    @property
+    def slack_username(self):
+        return self.config('slack_username', 'nuxeo_review')
+
+    @property
+    def slack_channel(self):
+        return self.config('slack_channel', '#pull-requests')
+
+    @property
+    def slack_token(self):
+        return self.config('slack_token', '')
+
+    @property
+    def number_checked_files(self):
+        return self.config('number_checked_files', 5)
+
+    @property
+    def number_reviewers(self):
+        return self.config('number_reviewers', 3)
+
+    @property
+    def mark_reviewed_comment(self):
+        allowed_comments = self.config('mark_reviewed_comment', u":+1:,\U0001F44D")
+        return re.sub(r"\s+", "", allowed_comments, flags=re.UNICODE).split(",") if allowed_comments else []
+
+    @property
+    def required_reviews(self):
+        return self.config('required_reviews', 2)
+
+    @property
+    def review_context(self):
+        return self.config('review_context', 'code-review/nuxeo')
+
+    @property
+    def required_organizations(self):
+        orgas = self.config('required_organizations', [])
+        if orgas:
+            orgas = re.sub(r"\s+", "", orgas, flags=re.UNICODE).split(",")
+        return orgas

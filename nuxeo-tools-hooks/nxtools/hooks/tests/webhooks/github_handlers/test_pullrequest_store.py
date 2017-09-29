@@ -18,7 +18,7 @@ Contributors:
 """
 
 from nxtools import services
-from nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_store import GithubStorePullRequestHandler
+from nxtools.hooks.endpoints.webhook.github_handlers.pull_request import GithubStorePullRequestHandler
 from nxtools.hooks.entities.github_entities import PullRequestEvent
 from nxtools.hooks.entities.db_entities import StoredPullRequest
 from nxtools.hooks.services.database import DatabaseService
@@ -40,7 +40,7 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
     @property
     def handler(self):
         """
-        :rtype: nxtools.hooks.endpoints.webhook.github_handlers.pullrequest_store.GithubStorePullRequestHandler
+        :rtype: nxtools.hooks.endpoints.webhook.github_handlers.pull_request.GithubStorePullRequestHandler
         """
         return services.get(GithubStorePullRequestHandler)
 
