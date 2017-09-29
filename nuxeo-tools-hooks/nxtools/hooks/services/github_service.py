@@ -42,6 +42,7 @@ from lxml.etree import LxmlError
 from mongoengine.errors import OperationError
 from nxtools import ServiceContainer, services
 from nxtools.hooks.entities.db_entities import StoredPullRequest
+from nxtools.hooks.entities.exceptions import SlackException
 from nxtools.hooks.entities.github_entities import OrganizationWrapper, RepositoryWrapper
 from nxtools.hooks.services import AbstractService
 from nxtools.hooks.services.jira_service import JiraService
@@ -108,9 +109,10 @@ class GithubService(AbstractService):
 
         stored_pr.branch = pull_request.head.ref
         stored_pr.head_commit = pull_request.head.sha
-        stored_pr.created_at = pull_request.created_at
         stored_pr.save()
         log.info('Pull request %s/%s/pull/%d saved', organization.login, repository.name, pull_request.number)
+
+        return stored_pr
 
     def get_pullrequest(self, stored_pullrequest):
         github = services.get(GithubService)  # type: GithubService
@@ -476,42 +478,57 @@ class GithubReviewService(AbstractService):
             context=self.review_context)
 
     def slack_notify(self, event, owners):
+        """
+        :type event: nxtools.hooks.entities.github_entities.PullRequestEvent
+        :type owners: list
+        :rtype: dict
+        """
         reviewers = " ".join(["@" + o for o in owners])
         slack = SlackClient(self.slack_token)
 
         log.info('Sending slack notification for %s/%s/pull/%d in %s',
                  event.organization.login, event.repository.name, event.pull_request.number, self.slack_channel)
 
-        slack.api_call('chat.postMessage',
-                       channel=self.slack_channel,
-                       username=self.slack_username,
-                       icon_emoji=self.slack_icon,
-                       unfurl_links=False,
-                       attachments=[
-                           {
-                               "fallback": "%s (%s) has created %s/%s PR #%d: %s. Potential reviewers: %s" % (
-                                   event.pull_request.user.login,
-                                   event.pull_request.user.html_url,
-                                   event.organization.login,
-                                   event.repository.name,
-                                   event.pull_request.number,
-                                   event.pull_request.title,
-                                   reviewers
-                               ),
-                               "color": "good",
-                               "author_name": event.pull_request.user.login,
-                               "author_link": event.pull_request.user.html_url,
-                               "title": "%s/%s PR #%d: %s" % (
-                                   event.organization.login,
-                                   event.repository.name,
-                                   event.pull_request.number,
-                                   event.pull_request.title),
-                               "title_link": event.pull_request.html_url,
-                               "text": "Needs 2 review to merge. Potential reviewers: " + reviewers
-                           }
-                       ])
+        resp = slack.api_call('chat.postMessage',
+                              channel=self.slack_channel,
+                              username=self.slack_username,
+                              icon_emoji=self.slack_icon,
+                              unfurl_links=False,
+                              attachments=[
+                                  {
+                                      "fallback": "%s (%s) has created %s/%s PR #%d: %s. Potential reviewers: %s" % (
+                                          event.pull_request.user.login,
+                                          event.pull_request.user.html_url,
+                                          event.organization.login,
+                                          event.repository.name,
+                                          event.pull_request.number,
+                                          event.pull_request.title,
+                                          reviewers
+                                      ),
+                                      "color": "good",
+                                      "author_name": event.pull_request.user.login,
+                                      "author_link": event.pull_request.user.html_url,
+                                      "title": "%s/%s PR #%d: %s" % (
+                                          event.organization.login,
+                                          event.repository.name,
+                                          event.pull_request.number,
+                                          event.pull_request.title),
+                                      "title_link": event.pull_request.html_url,
+                                      "text": "Needs 2 review to merge. Potential reviewers: " + reviewers
+                                  }
+                              ])
+
+        if not resp.get('ok', False):
+            raise SlackException
+
+        return resp
 
     def github_comment(self, event, owners):
+        """
+        :type event: nxtools.hooks.entities.github_entities.PullRequestEvent
+        :type owners: list
+        :rtype: github.IssueComment.IssueComment
+        """
         reviewers = ", ".join(["@" + o for o in owners])
 
         repository = services.get(GithubService).get_organization(event.organization.login). \
@@ -519,10 +536,10 @@ class GithubReviewService(AbstractService):
 
         pull_request = repository.get_pull(event.pull_request.number)  # type: PullRequest
 
-        log.info('Notifying potential reviewers with a comment on %s/%s/pull/%d',
+        log.info('Notifying potential reviewers with a comment of %s/%d/pull/%d on %s',
                  event.organization.login, event.repository.name, event.pull_request.number, self.slack_channel)
 
-        pull_request.create_issue_comment("From the blame information on this pull request, potential reviewers: "
+        return pull_request.create_issue_comment("From the blame information on this pull request, potential reviewers: "
                                           + reviewers)
 
     @property
