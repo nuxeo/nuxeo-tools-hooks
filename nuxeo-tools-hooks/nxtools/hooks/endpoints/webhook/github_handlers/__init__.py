@@ -17,9 +17,13 @@ Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
 """
 import json
+import logging
+
 from abc import ABCMeta, abstractmethod
 from nxtools import services
 from nxtools.hooks.services.config import Config
+
+log = logging.getLogger(__name__)
 
 
 class AbstractGithubHandler(object):
@@ -30,7 +34,10 @@ class AbstractGithubHandler(object):
 
     def handle(self, payload_body):
         if services.get(Config).getboolean(self.config_section, 'active', True):
-            return self._do_handle(payload_body)
+            try:
+                return self._do_handle(payload_body)
+            except Exception, e:
+                log.warn('Unhandled exception: %s', e.message, exc_info=1)
         else:
             return 204, "Disabled"
 
