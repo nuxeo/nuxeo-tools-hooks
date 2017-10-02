@@ -31,7 +31,6 @@ from github.GithubException import UnknownObjectException, GithubException
 from github.Commit import Commit
 from github.File import File
 from github.Hook import Hook
-from github.PullRequest import PullRequest
 from github.IssueComment import IssueComment
 from github.MainClass import Github
 from github.Organization import Organization
@@ -43,7 +42,7 @@ from mongoengine.errors import OperationError
 from nxtools import ServiceContainer, services
 from nxtools.hooks.entities.db_entities import StoredPullRequest
 from nxtools.hooks.entities.exceptions import SlackException
-from nxtools.hooks.entities.github_entities import OrganizationWrapper, RepositoryWrapper
+from nxtools.hooks.entities.github_entities import OrganizationWrapper, RepositoryWrapper, PullRequest
 from nxtools.hooks.services import AbstractService
 from nxtools.hooks.services.jira_service import JiraService
 from slackclient import SlackClient
@@ -110,7 +109,6 @@ class GithubService(AbstractService):
         stored_pr.branch = pull_request.head.ref
         stored_pr.head_commit = pull_request.head.sha
         stored_pr.save()
-        log.info('Pull request %s/%s/pull/%d saved', organization.login, repository.name, pull_request.number)
 
         return stored_pr
 
@@ -384,6 +382,10 @@ class GithubReviewService(AbstractService):
         return lines
 
     def get_owners(self, event):
+        """
+        :type event: nxtools.hooks.entities.github_entities.PullRequestEvent
+        :return:
+        """
         files = []
         deletion_owners = {}
         all_owners = {}
@@ -441,30 +443,28 @@ class GithubReviewService(AbstractService):
         return True in [github.get_organization(name).has_in_members(github.get_user(login))
                         for name in self.required_organizations] if self.required_organizations else True
 
-    def count_reviews(self, pull_request, last_commit):
+    def get_reviewers(self, pull_request):
         """
-         :type pull_request: PullRequest
-         :type last_commit: Commit
+         :type pull_request: StoredPullRequest
          """
-        reviews = 0
-        for comment in pull_request.get_issue_comments():  # type: IssueComment
+        reviewers = []
+        last_commit = pull_request.gh_object.get_commits().reversed[0]  # type: Commit
+        for comment in pull_request.gh_object.get_issue_comments():  # type: IssueComment
             if comment.created_at > last_commit.commit.author.date and \
                             comment.body.strip() in self.mark_reviewed_comment and \
                     self.has_required_organizations(comment.user.login):
-                reviews += 1
+                reviewers.append(comment.user.login)
 
-        return reviews
+        return reviewers
 
-    def set_review_status(self, repository, pull_request, last_commit):
+    def set_review_status(self, repository, last_commit, count, status):
         """
          :type repository: github.Repository.Repository
-         :type pull_request: github.PullRequest.PullRequest
          :type last_commit: github.Commit.Commit
+         :type count: int
+         :type status: str
          """
-        reviews_count = self.count_reviews(pull_request, last_commit)
-
-        status = self.success_status if reviews_count >= self.required_reviews else self.pending_status
-        description = '%d (of %d) reviews' % (reviews_count, self.required_reviews)
+        description = '%d (of %d) reviews' % (count, self.required_reviews)
 
         log.info('Setting status of %s/%s/commits/%s to: %s',
                  repository.organization.login,
@@ -477,49 +477,70 @@ class GithubReviewService(AbstractService):
             description=description,
             context=self.review_context)
 
-    def slack_notify(self, event, owners):
+    def slack_notify(self, pull_request, owners, status=None, reviews_count=0, reviewers=None, force_create=False):
         """
-        :type event: nxtools.hooks.entities.github_entities.PullRequestEvent
+        :type pull_request: nxtools.hooks.entities.db_entities.StoredPullRequest
         :type owners: list
+        :type status: str
+        :type reviews_count: int
+        :type reviewers: list
         :rtype: dict
         """
-        reviewers = " ".join(["@" + o for o in owners])
+        suggest_reviewers = ["@" + o for o in owners if o not in reviewers]
         slack = SlackClient(self.slack_token)
 
         log.info('Sending slack notification for %s/%s/pull/%d in %s',
-                 event.organization.login, event.repository.name, event.pull_request.number, self.slack_channel)
+                 pull_request.organization, pull_request.repository, pull_request.gh_object.number, self.slack_channel)
 
-        resp = slack.api_call('chat.postMessage',
-                              channel=self.slack_channel,
-                              username=self.slack_username,
-                              icon_emoji=self.slack_icon,
-                              unfurl_links=False,
-                              attachments=[
-                                  {
-                                      "fallback": "%s (%s) has created %s/%s PR #%d: %s. Potential reviewers: %s" % (
-                                          event.pull_request.user.login,
-                                          event.pull_request.user.html_url,
-                                          event.organization.login,
-                                          event.repository.name,
-                                          event.pull_request.number,
-                                          event.pull_request.title,
-                                          reviewers
-                                      ),
-                                      "color": "good",
-                                      "author_name": event.pull_request.user.login,
-                                      "author_link": event.pull_request.user.html_url,
-                                      "title": "%s/%s PR #%d: %s" % (
-                                          event.organization.login,
-                                          event.repository.name,
-                                          event.pull_request.number,
-                                          event.pull_request.title),
-                                      "title_link": event.pull_request.html_url,
-                                      "text": "Needs 2 review to merge. Potential reviewers: " + reviewers
-                                  }
-                              ])
+        text = "Needs %d review to merge." % (self.required_reviews - reviews_count)
+
+        attachments = {
+            'title': "%s/%s PR #%d: %s" % (
+                pull_request.organization,
+                pull_request.repository,
+                pull_request.gh_object.number,
+                pull_request.gh_object.title),
+            'text': text,
+            'fallback': "%s (%s) has created %s/%s PR #%d: %s. Potential reviewers: %s" % (
+                pull_request.gh_object.user.login,
+                pull_request.gh_object.user.html_url,
+                pull_request.organization,
+                pull_request.repository,
+                pull_request.gh_object.number,
+                pull_request.gh_object.title,
+                ' '.join(["@" + o for o in suggest_reviewers])),
+            "color": "good",
+            "author_name": pull_request.gh_object.user.login,
+            "author_link": pull_request.gh_object.user.html_url,
+            "title_link": pull_request.gh_object.html_url
+        }
+
+        params = {
+            'channel': self.slack_channel,
+            'username': self.slack_username,
+            'unfurl_links': False,
+            'as_user': True,
+            'attachments': [attachments]
+        }
+
+        if not force_create and pull_request.review and pull_request.review.slack_id:
+            call = 'chat.update'
+            params.update({
+                'ts': pull_request.review.slack_id
+            })
+        else:
+            call = 'chat.postMessage'
+
+        if self.success_status == status:
+            text = 'Reviewed by %s' % ', '.join([o for o in reviewers])
+        elif len(suggest_reviewers) > 0:
+            text = text + ' Potential reviewers: %s' % ' '.join(["@" + o for o in suggest_reviewers])
+
+        attachments['text'] = text
+        resp = slack.api_call(call, **params)
 
         if not resp.get('ok', False):
-            raise SlackException
+            raise SlackException(resp.get('error', 'Unexpected error'))
 
         return resp
 
@@ -536,11 +557,12 @@ class GithubReviewService(AbstractService):
 
         pull_request = repository.get_pull(event.pull_request.number)  # type: PullRequest
 
-        log.info('Notifying potential reviewers with a comment of %s/%d/pull/%d on %s',
+        log.info('Notifying potential reviewers with a comment of %s/%s/pull/%d on %s',
                  event.organization.login, event.repository.name, event.pull_request.number, self.slack_channel)
 
-        return pull_request.create_issue_comment("From the blame information on this pull request, potential reviewers: "
-                                          + reviewers)
+        return pull_request.create_issue_comment(
+            "From the blame information on this pull request, potential reviewers: "
+            + reviewers)
 
     @property
     def activate(self):

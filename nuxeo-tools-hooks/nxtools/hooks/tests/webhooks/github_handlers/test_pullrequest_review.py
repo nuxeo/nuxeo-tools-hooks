@@ -23,10 +23,10 @@ from github.Commit import Commit
 from github.CommitStatus import CommitStatus
 from github.File import File
 from github.NamedUser import NamedUser
-from mock.mock import patch
+from mock.mock import patch, Mock
 from nxtools import services
 from nxtools.hooks.endpoints.webhook.github_handlers.pull_request import GithubReviewService, GithubReviewCommentHandler
-from nxtools.hooks.entities.db_entities import StoredPullRequest
+from nxtools.hooks.entities.db_entities import StoredPullRequest, PullRequestReview
 from nxtools.hooks.entities.github_entities import PullRequestEvent, IssueCommentEvent
 from nxtools.hooks.services.config import Config
 from nxtools.hooks.services.database import DatabaseService
@@ -131,20 +131,39 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
             Config.ENV_PREFIX + 'GITHUBREVIEW_ACTIVE': True
         })
 
+        pr = StoredPullRequest(
+            organization=event.organization.login,
+            repository=event.repository.name,
+            pull_number=event.issue.number
+        )
+        pr.save()
+        pr.review = PullRequestReview(pull_request=pr).save()
+        pr.save()
+
         self.mocks.commit.get_statuses.return_value.reversed = [CommitStatus(None, None, {
             "context": "code-review/nuxeo"
         }, True)]
-        self.mocks.organization.get_repo.return_value.get_pull.return_value.get_commits.return_value.reversed = \
-            [self.mocks.commit]
-        self.mocks.organization.get_repo.return_value.get_pull.return_value.get_issue_comments.return_value = \
-            [event.comment]
 
-        handler._do_handle(payload_body)
+        self.mocks.pr.number = event.issue.number
+        self.mocks.pr.html_url = event.issue.html_url
+        self.mocks.pr.user.login = event.comment.user.login
+        self.mocks.pr.user.html_url = event.comment.user.html_url
+        self.mocks.pr.get_commits.return_value.reversed = [self.mocks.commit]
+        self.mocks.pr.get_issue_comments.return_value = [event.comment]
 
-        self.mocks.commit.create_status.assert_called_once()
+        self.mocks.organization.get_repo.return_value.get_pull.return_value = self.mocks.pr
 
-        payload_body['comment']['body'] = u"👍 "
-        self.mocks.commit.create_status.reset_mock()
-        handler._do_handle(payload_body)
+        with patch('nxtools.hooks.services.github_service.SlackClient.api_call') as mockedSlack:
+            handler._do_handle(payload_body)
 
-        self.mocks.commit.create_status.assert_called_once()
+            self.mocks.commit.create_status.assert_called_once()
+            mockedSlack.assert_called_once()
+
+            self.mocks.commit.create_status.reset_mock()
+            mockedSlack.reset_mock()
+
+            payload_body['comment']['body'] = u"👍 "
+            handler._do_handle(payload_body)
+
+            self.mocks.commit.create_status.assert_called_once()
+            mockedSlack.assert_called_once()

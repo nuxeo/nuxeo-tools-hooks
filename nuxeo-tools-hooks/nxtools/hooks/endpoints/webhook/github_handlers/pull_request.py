@@ -23,7 +23,7 @@ from github.PullRequest import PullRequest
 from nxtools import ServiceContainer, services
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubJsonHandler
 from nxtools.hooks.endpoints.webhook.github_hook import GithubHook
-from nxtools.hooks.entities.db_entities import PullRequestReview
+from nxtools.hooks.entities.db_entities import PullRequestReview, StoredPullRequest
 from nxtools.hooks.entities.github_entities import PullRequestEvent, IssueCommentEvent
 from nxtools.hooks.services.github_service import GithubService, GithubReviewService
 
@@ -60,24 +60,25 @@ class GithubStorePullRequestHandler(AbstractGithubJsonHandler):
         if review_service.activate and event.repository.private is False:
             repository = services.get(GithubService).get_organization(event.organization.login) \
                 .get_repo(event.repository.name)
-            pull_request = repository.get_pull(stored_pr.pull_number)  # type: PullRequest
-            last_commit = pull_request.get_commits().reversed[0]  # type: Commit
+            stored_pr.gh_object = repository.get_pull(stored_pr.pull_number)
+            last_commit = stored_pr.gh_object.get_commits().reversed[0]  # type: Commit
 
             log.debug('PullRequestEvent action: %s', event.action)
             log.info('Review asked for %s/%s/pull/%d/commits/%s',
                      stored_pr.organization, stored_pr.repository, stored_pr.pull_number, last_commit.sha)
 
-            review = stored_pr.review if stored_pr.review is not None else PullRequestReview(pull_request=stored_pr)
+            if stored_pr.review is None:
+                stored_pr.review = PullRequestReview(pull_request=stored_pr)
+            review = stored_pr.review
 
             if event.action in ['opened', 'synchronize']:
-                pass
-                # review_service.set_review_status(repository, pull_request, last_commit)
+                review_service.set_review_status(repository, last_commit, 0, review_service.pending_status)
 
             if event.action == 'opened':
-                owners = review_service.get_owners(event)
+                review.owners = review_service.get_owners(event)
 
-                slack_resp = review_service.slack_notify(event, owners)
-                github_comment = review_service.github_comment(event, owners)
+                slack_resp = review_service.slack_notify(stored_pr, review.owners, force_create=True)
+                github_comment = review_service.github_comment(event, review.owners)
 
                 review.slack_id = slack_resp.get('ts', None)
                 review.comment_id = github_comment.id
@@ -103,22 +104,36 @@ class GithubReviewCommentHandler(AbstractGithubJsonHandler):
     def _do_handle(self, payload_body):
         log.info('GithubReviewCommentHandler.handle')
         event = IssueCommentEvent(None, None, payload_body, True)
-        review_service = services.get(GithubReviewService)  # type: GithubReviewService
+        service = services.get(GithubReviewService)  # type: GithubReviewService
 
-        log.debug('Review active: %s, Repository private: %s', review_service.activate, event.repository.private)
-        if review_service.activate and event.repository.private is False:
+        log.debug('Review active: %s, Repository private: %s', service.activate, event.repository.private)
+        if service.activate and event.repository.private is False:
 
             log.debug('Comment body: "%s"', event.comment.body)
-            if event.comment.body.strip() in review_service.mark_reviewed_comment or \
+            if event.comment.body.strip() in service.mark_reviewed_comment or \
                     ('changes' in event.raw_data
-                     and event.raw_data['changes']['body']['from'].strip() in review_service.mark_reviewed_comment):
+                     and event.raw_data['changes']['body']['from'].strip() in service.mark_reviewed_comment):
                 repository = services.get(GithubService).get_organization(event.organization.login) \
                     .get_repo(event.repository.name)
-                pr = repository.get_pull(event.issue.number)  # type: PullRequest
-                last_commit = pr.get_commits().reversed[0]  # type: Commit
+
+                pr = StoredPullRequest.objects(
+                    organization=event.organization.login,
+                    repository=event.repository.name,
+                    pull_number=event.issue.number
+                ).first()  # type: StoredPullRequest
+
+                pr.gh_object = repository.get_pull(pr.pull_number)
+
+                last_commit = pr.gh_object.get_commits().reversed[0]  # type: Commit
                 log.info('Got review for %s/%s/pull/%d/commits/%s',
                          event.organization.login, event.repository.name, event.issue.number, last_commit.sha)
 
-                review_service.set_review_status(repository, pr, last_commit)
+                reviewers = service.get_reviewers(pr)
+                pr.review.update(add_to_set__owners=reviewers)
+
+                status = service.success_status if len(reviewers) >= service.required_reviews else service.pending_status
+
+                service.set_review_status(repository, last_commit, len(reviewers), status)
+                service.slack_notify(pr, reviewers, status, len(reviewers), reviewers)
 
         return 200, 'OK'

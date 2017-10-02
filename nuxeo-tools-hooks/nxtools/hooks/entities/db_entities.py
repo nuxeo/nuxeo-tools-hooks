@@ -21,12 +21,18 @@ import logging
 from datetime import datetime
 from mongoengine import CASCADE
 from mongoengine.document import Document
-from mongoengine.fields import StringField, IntField, DateTimeField, ReferenceField, LongField
+from mongoengine.fields import StringField, IntField, DateTimeField, ReferenceField, LongField, ListField
 
 log = logging.getLogger(__name__)
 
 
 class StoredPullRequest(Document):
+
+    def __init__(self, *args, **values):
+        super(StoredPullRequest, self).__init__(*args, **values)
+
+        self._pull_request = None
+
     branch = StringField()
     organization = StringField()
     repository = StringField()
@@ -35,6 +41,20 @@ class StoredPullRequest(Document):
     created_at = DateTimeField()
     updated_at = DateTimeField()
     review = ReferenceField('PullRequestReview')  # type: PullRequestReview
+
+    @property
+    def gh_object(self):
+        """
+        :rtype: github.PullRequest.PullRequest
+        """
+        return self._pull_request
+
+    @gh_object.setter
+    def gh_object(self, value):
+        """
+        :param value: github.PullRequest.PullRequest
+        """
+        self._pull_request = value
 
     def save(self, *args, **kwargs):
         if not self.created_at:
@@ -49,6 +69,7 @@ class StoredPullRequest(Document):
 
 class PullRequestReview(Document):
     pull_request = ReferenceField(StoredPullRequest, reverse_delete_rule=CASCADE)  # type: StoredPullRequest
+    owners = ListField(StringField(), default=list)
     slack_id = StringField()
     comment_id = LongField()
     created_at = DateTimeField()
