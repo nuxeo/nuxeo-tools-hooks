@@ -486,7 +486,7 @@ class GithubReviewService(AbstractService):
         :type reviewers: list
         :rtype: dict
         """
-        suggest_reviewers = ["@" + o for o in owners if o not in reviewers]
+        suggest_reviewers = ["@" + o for o in owners if reviewers and o not in reviewers] if owners else []
         slack = SlackClient(self.slack_token)
 
         log.info('Sending slack notification for %s/%s/pull/%d in %s',
@@ -544,25 +544,28 @@ class GithubReviewService(AbstractService):
 
         return resp
 
-    def github_comment(self, event, owners):
+    def github_notify(self, pull_request, owners):
         """
-        :type event: nxtools.hooks.entities.github_entities.PullRequestEvent
+        :type pull_request: nxtools.hooks.entities.db_entities.StoredPullRequest
         :type owners: list
         :rtype: github.IssueComment.IssueComment
         """
-        reviewers = ", ".join(["@" + o for o in owners])
 
-        repository = services.get(GithubService).get_organization(event.organization.login). \
-            get_repo(event.repository.name)  # type: RepositoryWrapper
-
-        pull_request = repository.get_pull(event.pull_request.number)  # type: PullRequest
+        jira_key = services.get(JiraService).get_issue_id_from_branch(pull_request.branch)
 
         log.info('Notifying potential reviewers with a comment of %s/%s/pull/%d on %s',
-                 event.organization.login, event.repository.name, event.pull_request.number, self.slack_channel)
+                 pull_request.organization, pull_request.repository, pull_request.pull_number, self.slack_channel)
 
-        return pull_request.create_issue_comment(
-            "From the blame information on this pull request, potential reviewers: "
-            + reviewers)
+        parts = []
+        if len(owners) > 0:
+            parts.append("From the blame information on this pull request, potential reviewers: %s" % (
+                ", ".join(["@" + o for o in owners])
+            ))
+
+        if jira_key:
+            parts.append("[View issue in JIRA](https://jira.nuxeo.com/browse/%s)" % jira_key)
+
+        return pull_request.gh_object.create_issue_comment("\n".join(parts))
 
     @property
     def activate(self):

@@ -19,7 +19,6 @@ Contributors:
 import logging
 
 from github.Commit import Commit
-from github.PullRequest import PullRequest
 from nxtools import ServiceContainer, services
 from nxtools.hooks.endpoints.webhook.github_handlers import AbstractGithubJsonHandler
 from nxtools.hooks.endpoints.webhook.github_hook import GithubHook
@@ -78,7 +77,7 @@ class GithubStorePullRequestHandler(AbstractGithubJsonHandler):
                 review.owners = review_service.get_owners(event)
 
                 slack_resp = review_service.slack_notify(stored_pr, review.owners, force_create=True)
-                github_comment = review_service.github_comment(event, review.owners)
+                github_comment = review_service.github_notify(stored_pr, review.owners)
 
                 review.slack_id = slack_resp.get('ts', None)
                 review.comment_id = github_comment.id
