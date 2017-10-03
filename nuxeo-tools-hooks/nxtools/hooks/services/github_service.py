@@ -530,7 +530,7 @@ class GithubReviewService(AbstractService):
             call = 'chat.postMessage'
 
         parts = []
-        if self.pending_status == status:
+        if status in (None, self.pending_status):
             parts.append("Needs %d review to merge." % (self.required_reviews - reviews_count))
             if suggest_reviewers:
                 parts.append('Potential reviewers: %s.' % ' '.join([o for o in suggest_reviewers]))
