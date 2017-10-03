@@ -486,7 +486,8 @@ class GithubReviewService(AbstractService):
         :type reviewers: list
         :rtype: dict
         """
-        suggest_reviewers = ["@" + o for o in owners if reviewers and o not in reviewers] if owners else []
+        reviewers = reviewers if reviewers else []
+        suggest_reviewers = ["@" + o for o in owners if o not in reviewers] if owners else []
         slack = SlackClient(self.slack_token)
 
         log.info('Sending slack notification for %s/%s/pull/%d in %s',
@@ -508,7 +509,7 @@ class GithubReviewService(AbstractService):
                 pull_request.repository,
                 pull_request.gh_object.number,
                 pull_request.gh_object.title,
-                ' '.join(["@" + o for o in suggest_reviewers])),
+                ' '.join([o for o in suggest_reviewers])),
             "color": "good",
             "author_name": pull_request.gh_object.user.login,
             "author_link": pull_request.gh_object.user.html_url,
@@ -534,7 +535,7 @@ class GithubReviewService(AbstractService):
         if self.success_status == status:
             text = 'Reviewed by %s' % ', '.join([o for o in reviewers])
         elif len(suggest_reviewers) > 0:
-            text = text + ' Potential reviewers: %s' % ' '.join(["@" + o for o in suggest_reviewers])
+            text = text + ' Potential reviewers: %s' % ' '.join([o for o in suggest_reviewers])
 
         attachments['text'] = text
         resp = slack.api_call(call, **params)
