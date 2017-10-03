@@ -493,15 +493,12 @@ class GithubReviewService(AbstractService):
         log.info('Sending slack notification for %s/%s/pull/%d in %s',
                  pull_request.organization, pull_request.repository, pull_request.gh_object.number, self.slack_channel)
 
-        text = "Needs %d review to merge." % (self.required_reviews - reviews_count)
-
         attachments = {
             'title': "%s/%s PR #%d: %s" % (
                 pull_request.organization,
                 pull_request.repository,
                 pull_request.gh_object.number,
                 pull_request.gh_object.title),
-            'text': text,
             'fallback': "%s (%s) has created %s/%s PR #%d: %s. Potential reviewers: %s" % (
                 pull_request.gh_object.user.login,
                 pull_request.gh_object.user.html_url,
@@ -532,12 +529,18 @@ class GithubReviewService(AbstractService):
         else:
             call = 'chat.postMessage'
 
-        if self.success_status == status:
-            text = 'Reviewed by %s' % ', '.join([o for o in reviewers])
-        elif len(suggest_reviewers) > 0:
-            text = text + ' Potential reviewers: %s' % ' '.join([o for o in suggest_reviewers])
+        parts = []
+        if self.pending_status == status:
+            parts.append("Needs %d review to merge." % (self.required_reviews - reviews_count))
+            if suggest_reviewers:
+                parts.append('Potential reviewers: %s.' % ' '.join([o for o in suggest_reviewers]))
+        if reviewers:
+            text = '%sReviewed by %s.' % ('\n' if parts else '', ', '.join(["@" + o for o in reviewers]))
+            parts.append(text)
+        elif suggest_reviewers:
+            pass
 
-        attachments['text'] = text
+        attachments['text'] = ' '.join(parts)
         resp = slack.api_call(call, **params)
 
         if not resp.get('ok', False):
@@ -558,7 +561,7 @@ class GithubReviewService(AbstractService):
                  pull_request.organization, pull_request.repository, pull_request.pull_number, self.slack_channel)
 
         parts = []
-        if len(owners) > 0:
+        if owners:
             parts.append("From the blame information on this pull request, potential reviewers: %s" % (
                 ", ".join(["@" + o for o in owners])
             ))
@@ -566,7 +569,7 @@ class GithubReviewService(AbstractService):
         if jira_key:
             parts.append("[View issue in JIRA](https://jira.nuxeo.com/browse/%s)" % jira_key)
 
-        if len(parts) > 0:
+        if parts:
             return pull_request.gh_object.create_issue_comment("\n".join(parts))
 
     @property
