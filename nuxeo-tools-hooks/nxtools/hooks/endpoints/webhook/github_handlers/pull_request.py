@@ -80,7 +80,9 @@ class GithubStorePullRequestHandler(AbstractGithubJsonHandler):
                 github_comment = review_service.github_notify(stored_pr, review.owners)
 
                 review.slack_id = slack_resp.get('ts', None)
-                review.comment_id = github_comment.id
+
+                if github_comment:
+                    review.comment_id = github_comment.id
 
             try:
                 review.save()

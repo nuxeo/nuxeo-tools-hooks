@@ -565,7 +565,8 @@ class GithubReviewService(AbstractService):
         if jira_key:
             parts.append("[View issue in JIRA](https://jira.nuxeo.com/browse/%s)" % jira_key)
 
-        return pull_request.gh_object.create_issue_comment("\n".join(parts))
+        if len(parts) > 0:
+            return pull_request.gh_object.create_issue_comment("\n".join(parts))
 
     @property
     def activate(self):
