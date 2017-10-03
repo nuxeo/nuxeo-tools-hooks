@@ -135,6 +135,6 @@ class GithubReviewCommentHandler(AbstractGithubJsonHandler):
                 status = service.success_status if len(reviewers) >= service.required_reviews else service.pending_status
 
                 service.set_review_status(repository, last_commit, len(reviewers), status)
-                service.slack_notify(pr, reviewers, status, len(reviewers), reviewers)
+                service.slack_notify(pr, pr.review.owners, status, len(reviewers), reviewers)
 
         return 200, 'OK'
