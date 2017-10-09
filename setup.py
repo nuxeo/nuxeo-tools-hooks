@@ -49,5 +49,6 @@ setup(
         'paramiko==2.0.2',
         'lxml==3.7.2',
         'html5lib==0.999999999',
+        'CacheControl==0.12.3',
     ]
 )
