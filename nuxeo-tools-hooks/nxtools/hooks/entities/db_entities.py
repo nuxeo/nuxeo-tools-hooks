@@ -37,6 +37,8 @@ class StoredPullRequest(Document):
     organization = StringField()
     repository = StringField()
     head_commit = StringField()
+    jira_key = StringField()
+    jira_summary = StringField()
     pull_number = IntField()
     created_at = DateTimeField()
     updated_at = DateTimeField()

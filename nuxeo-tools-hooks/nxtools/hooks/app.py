@@ -21,7 +21,6 @@ Contributors:
 import logging
 import os
 
-import sys
 from flask.app import Flask
 from logging import FileHandler
 from logging.config import fileConfig
@@ -113,6 +112,7 @@ class ToolsHooksApp(object):
 
     def __call__(self, environ, start_response):
         return self.setup(environ).__call__(environ, start_response)
+
 
 application = ToolsHooksApp()
 

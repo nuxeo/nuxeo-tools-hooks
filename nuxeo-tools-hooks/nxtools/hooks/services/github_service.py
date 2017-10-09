@@ -110,21 +110,35 @@ class GithubService(AbstractService):
         stored_pr.head_commit = pull_request.head.sha
         stored_pr.save()
 
+        self.update_pullrequest_with_jira(stored_pr)
+
         return stored_pr
+
+    def update_pullrequest_with_jira(self, stored_pullrequest):
+        jira = services.get(JiraService)  # type: JiraService
+
+        if not stored_pullrequest.jira_key:
+            jira_key = stored_pullrequest.jira_key = jira.get_issue_id_from_branch(stored_pullrequest.branch)
+            stored_pullrequest.jira_summary = jira.get_issue(jira_key, 'summary').fields.summary \
+                if jira_key is not None else None
+
+            stored_pullrequest.save()
 
     def get_pullrequest(self, stored_pullrequest):
         github = services.get(GithubService)  # type: GithubService
-        jira = services.get(JiraService)  # type: JiraService
 
         try:
             organization = github.get_organization(stored_pullrequest.organization)
             repository = organization.get_repo(stored_pullrequest.repository)
             pullrequest = repository.get_pull(stored_pullrequest.pull_number)
             head_commit = repository.get_commit(pullrequest.head.sha)
-            jira_key = jira.get_issue_id_from_branch(stored_pullrequest.branch)
-            jira_issue = jira.get_issue(jira_key) if jira_key is not None else None
 
-            if jira_key is None:
+            self.update_pullrequest_with_jira(stored_pullrequest)
+
+            jira_key = stored_pullrequest.jira_key
+            jira_issue = stored_pullrequest.jira_summary
+
+            if not jira_key:
                 log.info('get_pullrequest: Could not parse JIRA key for %s/%s/pull/%d', organization.login,
                          repository.name, pullrequest.number)
 
@@ -147,7 +161,7 @@ class GithubService(AbstractService):
                 'id': pullrequest.id,
                 'issue_url': pullrequest.issue_url,
                 'jira_key': jira_key,
-                'jira_summary': jira_issue.fields.summary if jira_key is not None else None,
+                'jira_summary': jira_issue,
                 'merge_commit_sha': pullrequest.merge_commit_sha,
                 'mergeable': pullrequest.mergeable,
                 'mergeable_state': pullrequest.mergeable_state,
@@ -224,25 +238,25 @@ class GithubService(AbstractService):
                     lambda pr: self.create_pullrequest(repository.organization, repository, pr), pullrequest)
                     for pullrequest in opened_pulls])
 
-                uncertain_pulls = StoredPullRequest.objects(
-                    organization=organization_name,
-                    repository=repository_name,
-                    pull_number__nin=[pull.number for pull in opened_pulls])
+            uncertain_pulls = StoredPullRequest.objects(
+                organization=organization_name,
+                repository=repository_name,
+                pull_number__nin=[pull.number for pull in opened_pulls])
 
-                if uncertain_pulls:
-                    log.info('No intel fetched for %s/%s pull requests: %s',
-                             organization_name, repository_name,
-                             ", ".join([str(pull.pull_number) for pull in uncertain_pulls]))
+            if uncertain_pulls:
+                log.info('No intel fetched for %s/%s pull requests: %s',
+                         organization_name, repository_name,
+                         ", ".join([str(pull.pull_number) for pull in uncertain_pulls]))
 
-                    for stored_pull in uncertain_pulls:
-                        log.info('Checking status of %s/%s/pull/%d',
+                for stored_pull in uncertain_pulls:
+                    log.info('Checking status of %s/%s/pull/%d',
+                             organization_name, repository_name, stored_pull.pull_number)
+
+                    original_pull = repository.get_pull(stored_pull.pull_number)
+                    if "closed" == original_pull.state:
+                        log.info('%s/%s/pull/%d is closed, removing it',
                                  organization_name, repository_name, stored_pull.pull_number)
-
-                        original_pull = repository.get_pull(stored_pull.pull_number)
-                        if "closed" == original_pull.state:
-                            log.info('%s/%s/pull/%d is closed, removing it',
-                                     organization_name, repository_name, stored_pull.pull_number)
-                            stored_pull.delete()
+                        stored_pull.delete()
 
         except (HTTPException, GithubException, OperationError), e:
             log.warn('sync_pull_requests: Failed to fetch pull requests of repository %s/%s: %s',
