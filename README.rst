@@ -2,8 +2,8 @@
 Nuxeo Tools Captain Hook
 ========================
 
-.. image:: https://qa.nuxeo.org/jenkins/buildStatus/icon?job=Misc/nuxeo-tools-hooks
-         :target: https://qa.nuxeo.org/jenkins/job/Misc/job/nuxeo-tools-hooks/
+.. image:: https://qa.nuxeo.org/jenkins/buildStatus/icon?job=/Misc/nuxeo-tools-hooks-branches/master
+         :target: https://qa.nuxeo.org/jenkins/job/Misc/job/nuxeo-tools-hooks-branches/job/master/
 
 About
 =====
