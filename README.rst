@@ -23,7 +23,7 @@ Installation
 Usage
 =====
 
-Please read https://wiki.nuxeo.com/display/NIG/Captain+Hooks
+Please read https://nuxeowiki.atlassian.net/wiki/spaces/NIG/pages/2621620/Captain+Hooks
 
 ********
 Features
