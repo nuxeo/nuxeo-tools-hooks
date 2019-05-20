@@ -51,9 +51,7 @@ class JiraClient(JIRA):
                  get_server_info=True, async=False, logging=True, max_retries=3, proxies=None):
         super(JiraClient, self).__init__(server, options, basic_auth, oauth, jwt, kerberos, validate, get_server_info,
                                          async, logging, max_retries, proxies)
-
         cacheControl = CacheControlAdapter(heuristic=OneDayHeuristic())
-
         self._session.mount('http://', cacheControl)
         self._session.mount('https://', cacheControl)
         self._session.headers.pop('cache-control')

@@ -1,5 +1,5 @@
 """
-(C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and contributors.
+(C) Copyright 2016-2019 Nuxeo SA (http://nuxeo.com/) and contributors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -40,11 +40,8 @@ class GithubStorePullRequestHandler(AbstractGithubJsonHandler):
     def _do_handle(self, payload_body):
         log.info('GithubStorePullRequestHandler.handle')
         event = PullRequestEvent(None, None, payload_body, True)
-
         stored_pull_request = self.store_pull_request(event)
-
         self.trigger_review(stored_pull_request, event)
-
         return 200, GithubStorePullRequestHandler.MSG_OK
 
     @staticmethod
@@ -70,17 +67,8 @@ class GithubStorePullRequestHandler(AbstractGithubJsonHandler):
                 stored_pr.review = PullRequestReview(pull_request=stored_pr)
             review = stored_pr.review
 
-            if event.action in ['opened', 'synchronize']:
-                review_service.set_review_status(repository, last_commit, 0, review_service.pending_status)
-
             if event.action == 'opened':
-                review.owners = review_service.get_owners(event)
-
-                slack_resp = review_service.slack_notify(stored_pr, review.owners, force_create=True)
-                github_comment = review_service.github_notify(stored_pr, review.owners)
-
-                review.slack_id = slack_resp.get('ts', None)
-
+                github_comment = review_service.github_notify(stored_pr)
                 if github_comment:
                     review.comment_id = github_comment.id
 
@@ -95,46 +83,3 @@ class GithubStorePullRequestHandler(AbstractGithubJsonHandler):
     def store_pull_request(event):
         return services.get(GithubService).create_pullrequest(event.organization, event.repository, event.pull_request)
 
-
-@ServiceContainer.service
-class GithubReviewCommentHandler(AbstractGithubJsonHandler):
-
-    def can_handle(self, headers, body):
-        return "issue_comment" == headers[GithubHook.payloadHeader]
-
-    def _do_handle(self, payload_body):
-        log.info('GithubReviewCommentHandler.handle')
-        event = IssueCommentEvent(None, None, payload_body, True)
-        service = services.get(GithubReviewService)  # type: GithubReviewService
-
-        log.debug('Review active: %s, Repository private: %s', service.activate, event.repository.private)
-        if service.activate and event.repository.private is False:
-
-            log.debug('Comment body: "%s"', event.comment.body)
-            if event.comment.body.strip() in service.mark_reviewed_comment or \
-                    ('changes' in event.raw_data
-                     and event.raw_data['changes']['body']['from'].strip() in service.mark_reviewed_comment):
-                repository = services.get(GithubService).get_organization(event.organization.login) \
-                    .get_repo(event.repository.name)
-
-                pr = StoredPullRequest.objects(
-                    organization=event.organization.login,
-                    repository=event.repository.name,
-                    pull_number=event.issue.number
-                ).first()  # type: StoredPullRequest
-
-                pr.gh_object = repository.get_pull(pr.pull_number)
-
-                last_commit = pr.gh_object.get_commits().reversed[0]  # type: Commit
-                log.info('Got review for %s/%s/pull/%d/commits/%s',
-                         event.organization.login, event.repository.name, event.issue.number, last_commit.sha)
-
-                reviewers = service.get_reviewers(pr)
-                pr.review.update(add_to_set__owners=reviewers)
-
-                status = service.success_status if len(reviewers) >= service.required_reviews else service.pending_status
-
-                service.set_review_status(repository, last_commit, len(reviewers), status)
-                service.slack_notify(pr, pr.review.owners, status, len(reviewers), reviewers)
-
-        return 200, 'OK'

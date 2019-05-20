@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-(C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and contributors.
+(C) Copyright 2016-2019 Nuxeo SA (http://nuxeo.com/) and contributors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ limitations under the License.
 
 Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
+    jcarsique
 """
 import json
 
@@ -25,7 +26,7 @@ from github.File import File
 from github.NamedUser import NamedUser
 from mock.mock import patch, Mock
 from nxtools import services
-from nxtools.hooks.endpoints.webhook.github_handlers.pull_request import GithubReviewService, GithubReviewCommentHandler
+from nxtools.hooks.endpoints.webhook.github_handlers.pull_request import GithubReviewService
 from nxtools.hooks.entities.db_entities import StoredPullRequest, PullRequestReview
 from nxtools.hooks.entities.github_entities import PullRequestEvent, IssueCommentEvent
 from nxtools.hooks.services.config import Config
@@ -43,8 +44,6 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
     def tearDown(self):
         super(GithubReviewPullRequestHandlerTest, self).tearDown()
 
-        # StoredPullRequest.drop_collection()
-
     def mocked_in_members(self, username):
         self.assertIsInstance(username, NamedUser)
         return username.login in ['mguillaume', 'jcarsique', 'efge', 'tmartins']
@@ -55,115 +54,10 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
     def test_open_pull_request(self):
         with GithubHookHandlerTest.payload_file('github_pullrequest_open') as payload:
             body = self.get_json_body_from_payload(payload)
-
-        review_service = services.get(GithubReviewService)  # type: GithubReviewService
         event = PullRequestEvent(None, None, body, True)
-
         self.assertEqual(body["action"], event.action)
         self.assertEqual(body["number"], event.number)
         self.assertEqual(body["pull_request"]["head"]["ref"], event.pull_request.head.ref)
         self.assertEqual(body["pull_request"]["head"]["sha"], event.pull_request.head.sha)
         self.assertEqual(body["repository"]["name"], event.repository.name)
 
-        with open('nxtools/hooks/tests/resources/github_handlers/github_pullrequest_open.files.json') as files_json:
-            self.mocks.files = [File(None, None, raw_file, True) for raw_file in json.load(files_json)]
-
-        with open('nxtools/hooks/tests/resources/github_handlers/github_blame.html') as blame_file:
-            blame = review_service.parse_blame(blame_file.read())
-
-        self.mocks.commits = []
-
-        self.mocks.organization.get_repo.return_value.html_url = 'http://void.null/'
-        self.mocks.organization.get_repo.return_value.get_pull.return_value.number = 42
-        self.mocks.organization.get_repo.return_value.get_pull.return_value.get_files.return_value = self.mocks.files
-        self.mocks.organization.get_repo.return_value.get_pull.return_value.get_commits.return_value = \
-            self.mocks.commits
-        self.mocks.organization.has_in_members.side_effect = self.mocked_in_members
-
-        review_service.parse_patch(self.mocks.files[2].patch)
-        deletions = review_service.parse_patch(self.mocks.files[1].patch)
-
-        self.assertEqual(3, len(deletions))
-
-        self.assertEqual(1614, len([l for l in blame if l == 'jcarsique']))
-        self.assertEqual(127, len([l for l in blame if l == 'mguillaume']))
-        self.assertEqual(50, len([l for l in blame if l == 'efge']))
-        self.assertEqual(46, len([l for l in blame if l == 'atchertchian']))
-
-        patchers = [
-            patch('nxtools.hooks.endpoints.webhook.github_handlers.pull_request.GithubReviewService.parse_patch',
-                  return_value=deletions),
-            patch(
-                'nxtools.hooks.endpoints.webhook.github_handlers.pull_request.GithubReviewService.parse_blame',
-                return_value=blame),
-            patch('nxtools.hooks.entities.github_entities.RepositoryWrapper.get_blame', return_value=None),
-            patch('nxtools.hooks.services.github_service.Github.get_user', side_effect=self.mocked_get_user)
-        ]
-
-        [patcher.start() for patcher in patchers]
-
-        self.assertListEqual(['jcarsique', 'mguillaume', 'efge'], review_service.get_owners(event))
-
-        self.mocks.commits += [Commit(None, None, {
-            "author": {"login": "jcarsique"}
-        }, True), Commit(None, None, {
-            "author": {"login": "efge"}
-        }, True)]
-
-        self.assertListEqual(['mguillaume', 'atchertchian', 'nxmatic'], review_service.get_owners(event))
-
-        services.get(Config).set_request_environ({
-            Config.ENV_PREFIX + 'GITHUBREVIEW_REQUIRED_ORGANIZATIONS': 'nuxeo'
-        })
-
-        self.assertListEqual(['mguillaume', 'tmartins'], review_service.get_owners(event))
-
-        [patcher.stop() for patcher in patchers]
-
-    def test_review_pull_request(self):
-        with GithubHookHandlerTest.payload_file('github_issue_comment') as payload:
-            payload_body = self.get_json_body_from_payload(payload)
-
-        event = IssueCommentEvent(None, None, payload_body, True)
-        handler = services.get(GithubReviewCommentHandler)  # type: GithubReviewCommentHandler
-
-        services.get(Config).set_request_environ({
-            Config.ENV_PREFIX + 'GITHUBREVIEW_ACTIVE': True
-        })
-
-        pr = StoredPullRequest(
-            organization=event.organization.login,
-            repository=event.repository.name,
-            pull_number=event.issue.number
-        )
-        pr.save()
-        pr.review = PullRequestReview(pull_request=pr).save()
-        pr.save()
-
-        self.mocks.commit.get_statuses.return_value.reversed = [CommitStatus(None, None, {
-            "context": "code-review/nuxeo"
-        }, True)]
-
-        self.mocks.pr.number = event.issue.number
-        self.mocks.pr.html_url = event.issue.html_url
-        self.mocks.pr.user.login = event.comment.user.login
-        self.mocks.pr.user.html_url = event.comment.user.html_url
-        self.mocks.pr.get_commits.return_value.reversed = [self.mocks.commit]
-        self.mocks.pr.get_issue_comments.return_value = [event.comment]
-
-        self.mocks.organization.get_repo.return_value.get_pull.return_value = self.mocks.pr
-
-        with patch('nxtools.hooks.services.github_service.SlackClient.api_call') as mockedSlack:
-            handler._do_handle(payload_body)
-
-            self.mocks.commit.create_status.assert_called_once()
-            mockedSlack.assert_called_once()
-
-            self.mocks.commit.create_status.reset_mock()
-            mockedSlack.reset_mock()
-
-            payload_body['comment']['body'] = u"👍 "
-            handler._do_handle(payload_body)
-
-            self.mocks.commit.create_status.assert_called_once()
-            mockedSlack.assert_called_once()
