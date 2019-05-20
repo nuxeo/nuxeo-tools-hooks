@@ -29,7 +29,7 @@ from github.Repository import Repository
 from nxtools.hooks.client import CaptainHooksClient, CaptainHooksClientException
 
 """
-This scripts is used to setup webhooks on all Nuxeo Github repositories
+This scripts is used to setup webhooks on all Nuxeo GitHub repositories
 """
 
 logging.basicConfig(level=logging.INFO, filename='logs/GithubWebHooksAllRepos.log')
@@ -45,7 +45,7 @@ class GithubWebHooksAllRepos:
 
     def run(self):
         if self.GITHUB_TOKEN is None:
-            logging.critical('No github OAuth token defined in the GITHUB_TOKEN env variable')
+            logging.critical('No GitHub OAuth token defined in the GITHUB_TOKEN env variable')
             sys.exit(1)
 
         github = Github(self.GITHUB_TOKEN)
@@ -63,7 +63,6 @@ class GithubWebHooksAllRepos:
                     'absent': [
                         {'url': 'http://qapreprod.in.nuxeo.com/jenkins/github-webhook/'},
                         {'url': 'https://qa.nuxeo.org/githooks/send-email'},
-                        # {'url': 'https://app.review.ninja/github/webhook'},
                     ],
                     'present': [
                         {
@@ -72,7 +71,7 @@ class GithubWebHooksAllRepos:
                                 'content_type': 'json',
                                 'url': 'https://hooks.nuxeo.org/hook/'
                             },
-                            'events': ['push'],
+                            'events': ['push', 'pull_request'],
                             'active': True
                         },
                     ]

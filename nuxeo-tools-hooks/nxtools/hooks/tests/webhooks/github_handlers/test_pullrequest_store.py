@@ -29,12 +29,10 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
 
     def setUp(self):
         super(GithubStorePullRequestHandlerTest, self).setUp()
-
         services.get(DatabaseService).connect()
 
     def tearDown(self):
         super(GithubStorePullRequestHandlerTest, self).tearDown()
-
         StoredPullRequest.drop_collection()
 
     @property
@@ -56,7 +54,7 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
             self.assertEqual(body["pull_request"]["head"]["sha"], event.pull_request.head.sha)
             self.assertEqual(body["repository"]["name"], event.repository.name)
 
-            self.handler._do_handle(body)
+            self.handler._do_handle(body) # TODO NXBT-2325
 
             pull_requests = StoredPullRequest.objects(
                 branch=event.pull_request.head.ref,
