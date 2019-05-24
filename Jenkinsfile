@@ -1,6 +1,6 @@
 
 /*
- * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and contributors.
+ * (C) Copyright 2016-2019 Nuxeo SA (http://nuxeo.com/) and contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,9 +30,6 @@ node('SLAVE') {
         sh '''#!/bin/bash -ex
 rm -rf venv
 virtualenv venv
-'''
-        stage 'build'
-        sh '''#!/bin/bash -ex
 source venv/bin/activate
 pip install -r dev-requirements.txt
 pip install -e .
@@ -48,17 +45,16 @@ source venv/bin/activate
 python setup.py sdist'''
 
         image = docker.build 'nuxeo/nuxeo-tools-hooks'
-
-        sh "docker tag ${image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${env.BRANCH_NAME}"
-        sh "docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${env.BRANCH_NAME}"
-
-        sh "docker tag ${image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${commit_id}"
-        sh "docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${commit_id}"
+        sh """#!/bin/bash -ex
+docker tag ${image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${env.BRANCH_NAME}
+docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${env.BRANCH_NAME}
+docker tag ${image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${commit_id}
+docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${commit_id}"""
 
         logstash_image = docker.build('nuxeo/nuxeo-tools-hooks-logstash', 'docker/logstash')
-
-        sh "docker tag ${logstash_image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks-logstash:${env.BRANCH_NAME}"
-        sh "docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks-logstash:${env.BRANCH_NAME}"
+        sh """#!/bin/bash -ex
+docker tag ${logstash_image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks-logstash:${env.BRANCH_NAME}
+docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks-logstash:${env.BRANCH_NAME}"""
 
         step([$class: 'ArtifactArchiver', allowEmptyArchive: true, artifacts: 'dist/*.tar.gz', excludes: null, fingerprint: true, onlyIfSuccessful: true])
         step([$class: 'JiraIssueUpdater', issueSelector: [$class: 'DefaultIssueSelector'], scm: scm])
