@@ -17,6 +17,7 @@ Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
 """
 
+from nose.tools import nottest
 from nxtools import services
 from nxtools.hooks.endpoints.webhook.github_handlers.pull_request import GithubStorePullRequestHandler
 from nxtools.hooks.entities.github_entities import PullRequestEvent
@@ -42,7 +43,11 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
         """
         return services.get(GithubStorePullRequestHandler)
 
+    @nottest
     def test_store_pull_request(self):
+        """"
+        nottest: NXBT-2325
+        """
         with GithubHookHandlerTest.payload_file('github_pullrequest_open') as payload:
             body = self.get_json_body_from_payload(payload)
 
