@@ -15,67 +15,62 @@
  * limitations under the License.
  *
  * Contributors:
- *     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
+ *     Pierre-Gildas MILLON <pgmillon@nuxeo.com>, jcarsique
  */
 
 node('SLAVE') {
-    try {
-        stage 'prepare'
-//        step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'ci/qa.nuxeo.com'], statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: 'Building on Nuxeo CI', state: 'PENDING']]]])
-
-        checkout scm
-        sh "git rev-parse --short HEAD > .git/commit-id"
-        commit_id = readFile('.git/commit-id')
-
-        sh '''#!/bin/bash -ex
+    timeout(time: 60, unit: 'MINUTES') {
+        timestamps {
+            try {
+                def sha
+                stage 'prepare'
+                checkout scm
+                sha = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                sh '''#!/bin/bash -ex
 rm -rf venv
 virtualenv venv
 source venv/bin/activate
 pip install -r dev-requirements.txt
 pip install -e .
 '''
-        stage 'test'
-        sh '''#!/bin/bash -ex
+                stage 'test'
+                sh '''#!/bin/bash -ex
 source venv/bin/activate
 nosetests
 '''
-        stage 'package'
-        sh '''#!/bin/bash -ex
+                stage 'build'
+                sh '''#!/bin/bash -ex
 source venv/bin/activate
-python setup.py sdist'''
-
-        image = docker.build 'nuxeo/nuxeo-tools-hooks'
-        sh """#!/bin/bash -ex
+python setup.py sdist
+'''
+                image = docker.build 'nuxeo/nuxeo-tools-hooks'
+                sh """#!/bin/bash -ex
 docker tag ${image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${env.BRANCH_NAME}
 docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${env.BRANCH_NAME}
-docker tag ${image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${commit_id}
-docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${commit_id}"""
-
-        logstash_image = docker.build('nuxeo/nuxeo-tools-hooks-logstash', 'docker/logstash')
-        sh """#!/bin/bash -ex
+docker tag ${image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${sha}
+docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks:${sha}
+"""
+                logstash_image = docker.build('nuxeo/nuxeo-tools-hooks-logstash', 'docker/logstash')
+                sh """#!/bin/bash -ex
 docker tag ${logstash_image.id} dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks-logstash:${env.BRANCH_NAME}
-docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks-logstash:${env.BRANCH_NAME}"""
+docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks-logstash:${env.BRANCH_NAME}
+"""
+                archiveArtifacts allowEmptyArchive: true, artifacts: 'dist/*.tar.gz', fingerprint: true, onlyIfSuccessful: true
+                jiraIssueSelector(issueSelector: [$class: 'DefaultIssueSelector'])
 
-        step([$class: 'ArtifactArchiver', allowEmptyArchive: true, artifacts: 'dist/*.tar.gz', excludes: null, fingerprint: true, onlyIfSuccessful: true])
-        step([$class: 'JiraIssueUpdater', issueSelector: [$class: 'DefaultIssueSelector'], scm: scm])
-//        step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'ci/qa.nuxeo.com'], statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: 'Building on Nuxeo CI', state: 'SUCCESS']]]])
-
-        if('master' == env.BRANCH_NAME) {
-            build job: '/Private/System/deploy-hooks.nuxeo.org', parameters: [
-                    [$class: 'StringParameterValue', name: 'DASHBOARD_PACKAGE', value: 'https://qa.nuxeo.org/jenkins/job/Misc/job/nuxeo-tools-qa-dashboard/lastSuccessfulBuild/artifact/nuxeo-tools-qa-dashboard.zip'],
-                    [$class: 'StringParameterValue', name: 'TOOLS_BRANCH', value: 'master'],
-                    [$class: 'StringParameterValue', name: 'ANSIBLE_PRIV_BRANCH', value: '$TOOLS_BRANCH']
-            ], wait: false
+                if('master' == env.BRANCH_NAME) {
+                    build job: '/Private/System/deploy-hooks.nuxeo.org', parameters: [
+                            [$class: 'StringParameterValue', name: 'DASHBOARD_PACKAGE', value: 'https://qa.nuxeo.org/jenkins/job/Misc/job/nuxeo-tools-qa-dashboard/lastSuccessfulBuild/artifact/nuxeo-tools-qa-dashboard.zip'],
+                            [$class: 'StringParameterValue', name: 'TOOLS_BRANCH', value: 'master'],
+                            [$class: 'StringParameterValue', name: 'ANSIBLE_PRIV_BRANCH', value: '$TOOLS_BRANCH']
+                    ], wait: false
+                }
+            } catch (e) {
+                currentBuild.result = "FAILURE"
+                step([$class: 'ClaimPublisher'])
+                throw e
+            }
         }
-
-        if('SUCCESS' != currentBuild.getPreviousBuild().getResult()) {
-            slackSend channel: '#devops-notifs', color: 'good', message: "${env.JOB_NAME} - #${env.BUILD_NUMBER} Back to normal (<${env.BUILD_URL}|Open>)"
-        }
-    } catch (e) {
-//        step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'ci/qa.nuxeo.com'], statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: 'Building on Nuxeo CI', state: 'FAILURE']]]])
-        if('FAILURE' != currentBuild.getPreviousBuild().getResult()) {
-            slackSend channel: '#devops-notifs', color: 'danger', message: "${env.JOB_NAME} - #${env.BUILD_NUMBER} Failure (<${env.BUILD_URL}|Open>)"
-        }
-        throw e
     }
 }
+
