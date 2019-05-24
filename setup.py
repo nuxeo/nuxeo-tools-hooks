@@ -35,7 +35,7 @@ setup(
         'requests>=2.20.0',
         'requests-oauthlib==0.6.2',
         'PyJWT==1.4.2',
-        'cryptography==1.5.2',
+        'cryptography>=2.6.1',
         'PyGithub==1.28',
         'slackclient==1.0.2',
         'jira==1.0.7',
