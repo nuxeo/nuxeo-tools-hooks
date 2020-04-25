@@ -253,7 +253,7 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
             self.assertEqual(email.reply_to, "Pierre-Gildas MILLON hehe <pgmillon@nuxeo.com>")
             self.assertEqual(email.subject, "%s: %s (branch@%s)" % (
                 event.repository.name,
-                "NXBT-1074: better comments hehe",
+                "NXBT-1074: better comments for NXBT-1074/NXBT-3307 hehe",
                 event.ref[11:]))
 
     def test_private_repository(self):
@@ -295,10 +295,17 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
             self.email_service.sendemail.assert_called_once()
 
             email = self.handler.get_commit_email(event, event.commits[0], False)
+            self.assertRegexpMatches(email.body, 'JIRA:\n- https://jira.nuxeo.com/browse/NXP-8238')
+            self.assertRegexpMatches(email.body, '- https://jira.nuxeo.com/browse/NXP-666')
+            self.assertRegexpMatches(email.body, '- https://jira.nuxeo.com/browse/NXS-1234')
+            self.assertRegexpMatches(email.body, '- https://jira.nuxeo.com/browse/NXS-1234')
+
+            # check with only one issue
+            body["commits"][0]["message"] = "check regexp for NXP-8238 only"
+            event = PushEvent(None, None, body, True)
+            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler._do_handle(body))
+            email = self.handler.get_commit_email(event, event.commits[0], False)
             self.assertRegexpMatches(email.body, 'JIRA: https://jira.nuxeo.com/browse/NXP-8238')
-            self.assertRegexpMatches(email.body, 'JIRA: https://jira.nuxeo.com/browse/NXP-666')
-            self.assertRegexpMatches(email.body, 'JIRA: https://jira.nuxeo.com/browse/NXS-1234')
-            self.assertRegexpMatches(email.body, 'JIRA: https://jira.nuxeo.com/browse/NXS-1234')
 
     def test_ignore_repository(self):
         with GithubHookHandlerTest.payload_file('github_push') as payload:

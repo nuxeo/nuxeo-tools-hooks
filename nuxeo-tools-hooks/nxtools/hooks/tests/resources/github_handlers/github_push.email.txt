@@ -1,12 +1,14 @@
 Message:
-    NXBT-1074: better comments
+    NXBT-1074: better comments for NXBT-1074/NXBT-3307
 
 Repository: nuxeo-tools-hooks
 Branch: feature-NXBT-1074-hooks-refactoring
 Author: Pierre-Gildas MILLON <pgmillon@nuxeo.com>
 Date: 2016-05-03T16:55:28 UTC
 URL: https://github.com/nuxeo/nuxeo-tools-hooks/commit/3c24d8eafae62cb82c576d0f5ccbbe37bdeb9dd5
-JIRA: https://jira.nuxeo.com/browse/NXBT-1074
+JIRA:
+- https://jira.nuxeo.com/browse/NXBT-1074
+- https://jira.nuxeo.com/browse/NXBT-3307
 
 Files:
 A .gitignore
