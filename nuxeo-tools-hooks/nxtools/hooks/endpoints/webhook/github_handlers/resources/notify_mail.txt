@@ -5,15 +5,31 @@ WARNING: only Jenkins should commit on this branch
 {% endif %}
 Repository: {{ repository }}
 Branch: {{ branch }}
-Author: {{ author }}{% if with_pusher %}
-Pusher: {{ with_pusher }}{% endif %}
+Author: {{ author }}
+{%- if with_pusher %}
+Pusher: {{ with_pusher }}
+{%- endif %}
 Date: {{ commit_date.strftime('%Y-%m-%dT%H:%M:%S UTC') }}
-URL: {{ commit_url }}{% for jira_ticket in jira_tickets %}
-JIRA: https://jira.nuxeo.com/browse/{{ jira_ticket }}
-{% endfor %}
+URL: {{ commit_url }}
+{%- if jira_tickets|length == 1 %}
+JIRA: https://jira.nuxeo.com/browse/{{ jira_tickets[0] }}
+{%- endif %}
+{%- if jira_tickets|length > 1 %}
+JIRA:
+{%- for jira_ticket in jira_tickets %}
+- https://jira.nuxeo.com/browse/{{ jira_ticket }}
+{%- endfor %}
+{%- endif %}
+
 Files:
-{% for item in commit_added %}A {{ item }}
-{% endfor %}{% for item in commit_removed %}D {{ item }}
-{% endfor %}{% for item in commit_modified %}M {{ item }}
-{% endfor %}
+{%- for item in commit_added %}
+A {{ item }}
+{%- endfor %}
+{%- for item in commit_removed %}
+D {{ item }}
+{%- endfor %}
+{%- for item in commit_modified %}
+M {{ item }}
+{%- endfor %}
+
 {{ diff }}

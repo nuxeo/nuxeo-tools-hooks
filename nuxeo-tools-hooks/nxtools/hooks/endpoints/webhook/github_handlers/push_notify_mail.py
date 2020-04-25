@@ -205,7 +205,9 @@ class GithubPushNotifyMailHandler(AbstractGithubJsonHandler):
             pusher = "%s <%s>" % (event.pusher.name, event.pusher.email)
 
         for match in self.jira_regex.finditer(commit.message):
-            jira_tickets.append(match.group(1).upper())
+            ticket = match.group(1).upper()
+            if ticket not in jira_tickets:
+                jira_tickets.append(ticket)
 
         try:
             diff = services.get(GithubService).get_organization(event.organization.login).get_repo(event.repository.name).\
@@ -287,5 +289,4 @@ def repository_ignore(handler, event):
     :type event: nxtools.hooks.entities.github_entities.PushEvent
     """
     return event.repository.name in handler.ignore_repositories, False, None
-
 
