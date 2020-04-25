@@ -120,8 +120,10 @@ class GithubService(AbstractService):
 
         if not stored_pullrequest.jira_key:
             jira_key = stored_pullrequest.jira_key = jira.get_issue_id_from_branch(stored_pullrequest.branch)
-            stored_pullrequest.jira_summary = jira.get_issue(jira_key, 'summary').fields.summary \
-                if jira_key is not None else None
+            if jira_key is not None:
+                jira_issue = jira.get_issue(jira_key, 'summary')
+                stored_pullrequest.jira_summary = jira_issue.fields.summary \
+                if jira_issue is not None else None
 
             stored_pullrequest.save()
 

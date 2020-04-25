@@ -25,7 +25,6 @@ from nxtools.hooks.entities.db_entities import StoredPullRequest
 from nxtools.hooks.services.database import DatabaseService
 from nxtools.hooks.tests.webhooks.github_handlers import GithubHookHandlerTest
 
-
 class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
 
     def setUp(self):
@@ -43,11 +42,7 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
         """
         return services.get(GithubStorePullRequestHandler)
 
-    @nottest
     def test_store_pull_request(self):
-        """"
-        nottest: NXBT-2325
-        """
         with GithubHookHandlerTest.payload_file('github_pullrequest_open') as payload:
             body = self.get_json_body_from_payload(payload)
 
@@ -59,7 +54,7 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
             self.assertEqual(body["pull_request"]["head"]["sha"], event.pull_request.head.sha)
             self.assertEqual(body["repository"]["name"], event.repository.name)
 
-            self.handler._do_handle(body) # TODO NXBT-2325
+            self.handler._do_handle(body)
 
             pull_requests = StoredPullRequest.objects(
                 branch=event.pull_request.head.ref,

@@ -60,6 +60,7 @@ class JiraClient(JIRA):
 @ServiceContainer.service
 class JiraService(AbstractService):
     def __init__(self):
+        self.__jira_client = None
         if "basic" == self.config("auth_type"):
             self.__jira_client = JiraClient(self.config("url"),
                                             basic_auth=(self.config("basic_username"), self.config("basic_password")))
@@ -68,7 +69,9 @@ class JiraService(AbstractService):
         """
         :rtype: jira.resources.Issue
         """
-        return self.__jira_client.issue(id, fields)
+        if self.__jira_client is not None:
+            return self.__jira_client.issue(id, fields)
+        return None
 
     def get_issue_id_from_branch(self, branch_name):
         matches = re.compile("[a-z]+-([A-Z]+-[0-9]+)-.*").match(branch_name)
