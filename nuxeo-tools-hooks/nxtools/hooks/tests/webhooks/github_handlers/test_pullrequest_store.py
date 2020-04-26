@@ -118,15 +118,20 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
             return Issue(None, None, raw=raw)
         return None
 
+    def mock_create_jira_links(self, links):
+        self.mocks.jira_links.extend(links)
+
     def test_store_pull_request_trigger_review(self):
         patchers = [
             patch("nxtools.hooks.services.jira_service.JiraService.get_issue", self.mock_get_issue),
             patch("nxtools.hooks.services.jira_service.JiraService.get_issue_anonymous", self.mock_get_issue),
+            patch("nxtools.hooks.services.jira_service.JiraService.create_pullrequest_links", self.mock_create_jira_links),
         ]
         [patcher.start() for patcher in patchers]
         [self.addCleanup(patcher.stop) for patcher in patchers]
 
         self.config._config.set("GithubReviewService", "active", "true")
+        self.config._config.set("JiraService", "create_link_to_pullrequest", "true")
         with GithubHookHandlerTest.payload_file('github_pullrequest_open') as payload, \
             GithubHookHandlerTest.payload_file('github_pullrequest') as prp, \
             GithubHookHandlerTest.payload_file('github_pullrequest_commits') as prc:
@@ -135,11 +140,34 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
             commits = self.get_json_body_from_payload(prc)
             self.mocks.pr = MockPullRequest(pr, commits)
             self.mocks.organization.get_repo.return_value.get_pull = self.mock_get_pull
+            self.mocks.jira_links = []
 
             self.handler._do_handle(body)
             self.assertEqual("View issues in JIRA:\n" +
                              "- [NXP-20340](https://jira.nuxeo.com/browse/NXP-20340)\n" +
                              "- [NXBT-3308](https://jira.nuxeo.com/browse/NXBT-3308)", self.mocks.pr._comment)
+
+            self.assertEqual(2, len(self.mocks.jira_links))
+            link = {
+                "id": "NXP-20340",
+                "uid": "ghpr=https://github.com/nuxeo/nuxeo/pull/210",
+                "relationship": "Is referenced in",
+                "destination": {
+                    "url": "https://github.com/nuxeo/nuxeo/pull/210",
+                    "title": "PR for 6.0: #210",
+                    "icon": {
+                        "url16x16": "https://github.com/favicon.ico",
+                        "title": "PR for 6.0: #210"
+                    },
+                },
+                "application": {
+                    "type": "com.nuxeo.nuxeo-tools-hooks",
+                    "name": "Captain Hook"
+                }
+            }
+            self.assertDictEqual(link, self.mocks.jira_links[0])
+            link["id"] = "NXBT-3308"
+            self.assertDictEqual(link, self.mocks.jira_links[1])
 
             # check verbosity setting
             self.config._config.set("GithubReviewService", "include_jira_summary", "true")
