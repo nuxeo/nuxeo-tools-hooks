@@ -120,3 +120,44 @@ class JiraService(AbstractService):
                 keys.append(key) if key not in keys else None
 
         return keys
+
+    def github_notify(self, keys, pull_request):
+        if not self.config('create_link_to_pullrequest', False):
+            return
+        title = "PR for %s: #%s" % (pull_request.gh_object.base.ref, pull_request.pull_number)
+        url = pull_request.gh_object.html_url
+        links = []
+        for key in keys:
+            links.append(self.create_pullrequest_link(key, url, title))
+        self.create_pullrequest_links(links)
+
+    def create_pullrequest_link(self, key, url, title):
+        return {
+            "id": key,
+            "uid": "ghpr=%s" %url,
+            "relationship": "Is referenced in",
+            "destination": {
+                "url": url,
+                "title": title,
+                "icon": {
+                    "url16x16": "https://github.com/favicon.ico",
+                    "title": title
+                },
+            },
+            "application": {
+                "type": "com.nuxeo.nuxeo-tools-hooks",
+                "name": "Captain Hook"
+            }
+        }
+
+    def create_pullrequest_links(self, links):
+        if self.__jira_client is not None:
+            for link in links:
+                try:
+                    self.__jira_client.add_remote_link(
+                        link["id"], link["destination"], globalId=link["uid"],
+                        application=link["application"], relationship=link["relationship"])
+                except Exception as e:
+                    # ignore: issue could not exist for instance
+                    continue
+

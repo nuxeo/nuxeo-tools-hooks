@@ -337,6 +337,10 @@ class GithubReviewService(AbstractService):
         jira = services.get(JiraService)
         keys = jira.get_issue_ids_from_pullrequest(pull_request)
 
+        if keys:
+            jira_service = services.get(JiraService)  # type: JiraService
+            jira_service.github_notify(keys, pull_request)
+
         parts = []
         if len(keys) == 1:
             parts.append("View issue in JIRA: %s" % self._get_issue_comment(keys[0], jira))
