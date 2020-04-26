@@ -20,36 +20,10 @@ Contributors:
 """
 import json
 
-from github.Commit import Commit
-from github.CommitStatus import CommitStatus
-from github.File import File
-from github.NamedUser import NamedUser
-from mock.mock import patch, Mock
-from nxtools import services
-from nxtools.hooks.endpoints.webhook.github_handlers.pull_request import GithubReviewService
-from nxtools.hooks.entities.db_entities import StoredPullRequest, PullRequestReview
-from nxtools.hooks.entities.github_entities import PullRequestEvent, IssueCommentEvent
-from nxtools.hooks.services.config import Config
-from nxtools.hooks.services.database import DatabaseService
+from nxtools.hooks.entities.github_entities import PullRequestEvent
 from nxtools.hooks.tests.webhooks.github_handlers import GithubHookHandlerTest
 
-
 class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
-
-    def setUp(self):
-        super(GithubReviewPullRequestHandlerTest, self).setUp()
-
-        services.get(DatabaseService).connect()
-
-    def tearDown(self):
-        super(GithubReviewPullRequestHandlerTest, self).tearDown()
-
-    def mocked_in_members(self, username):
-        self.assertIsInstance(username, NamedUser)
-        return username.login in ['mguillaume', 'jcarsique', 'efge', 'tmartins']
-
-    def mocked_get_user(self, username):
-        return NamedUser(None, None, {"login": username}, True)
 
     def test_open_pull_request(self):
         with GithubHookHandlerTest.payload_file('github_pullrequest_open') as payload:
@@ -60,4 +34,3 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
         self.assertEqual(body["pull_request"]["head"]["ref"], event.pull_request.head.ref)
         self.assertEqual(body["pull_request"]["head"]["sha"], event.pull_request.head.sha)
         self.assertEqual(body["repository"]["name"], event.repository.name)
-
