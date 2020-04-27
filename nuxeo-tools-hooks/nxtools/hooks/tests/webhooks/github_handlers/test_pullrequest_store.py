@@ -15,15 +15,42 @@ limitations under the License.
 
 Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
+    Anahide Tchertchian <at@nuxeo.com>
 """
 
+from github.PullRequest import PullRequest
+from github.Commit import Commit
 from nose.tools import nottest
 from nxtools import services
 from nxtools.hooks.endpoints.webhook.github_handlers.pull_request import GithubStorePullRequestHandler
 from nxtools.hooks.entities.github_entities import PullRequestEvent
 from nxtools.hooks.entities.db_entities import StoredPullRequest
+from nxtools.hooks.services.config import Config
 from nxtools.hooks.services.database import DatabaseService
 from nxtools.hooks.tests.webhooks.github_handlers import GithubHookHandlerTest
+
+
+class MockPullRequest(PullRequest):
+
+    class MockedPaginatedList(list):
+        @property
+        def reversed(self):
+            self.reverse()
+            return self
+
+    def __init__(self, pr, commits):
+        PullRequest.__init__(self, None, {}, pr, True)
+        self._commits = commits
+        self._comment = None
+
+    def get_commits(self):
+        res = MockPullRequest.MockedPaginatedList()
+        for commit in self._commits:
+            res.append(Commit(None, {}, commit, True))
+        return res
+
+    def create_issue_comment(self, comment):
+        self._comment = comment
 
 class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
 
@@ -41,6 +68,13 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
         :rtype: nxtools.hooks.endpoints.webhook.github_handlers.pull_request.GithubStorePullRequestHandler
         """
         return services.get(GithubStorePullRequestHandler)
+
+    @property
+    def config(self):
+        """
+        :rtype: nxtools.hooks.services.config.Config
+        """
+        return services.get(Config)
 
     def test_store_pull_request(self):
         with GithubHookHandlerTest.payload_file('github_pullrequest_open') as payload:
@@ -67,3 +101,21 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
             self.assertEqual(body["pull_request"]["head"]["ref"], pull_requests[0].branch)
             self.assertEqual(body["pull_request"]["head"]["sha"], pull_requests[0].head_commit)
             self.assertEqual(body["repository"]["name"], pull_requests[0].repository)
+
+    def mock_get_pull(self, id):
+        return self.mocks.pr
+
+    def test_store_pull_request_trigger_review(self):
+        self.config._config.set("GithubReviewService", "active", "true")
+        with GithubHookHandlerTest.payload_file('github_pullrequest_open') as payload, \
+            GithubHookHandlerTest.payload_file('github_pullrequest') as prp, \
+            GithubHookHandlerTest.payload_file('github_pullrequest_commits') as prc:
+            body = self.get_json_body_from_payload(payload)
+            pr = self.get_json_body_from_payload(prp)
+            commits = self.get_json_body_from_payload(prc)
+            self.mocks.pr = MockPullRequest(pr, commits)
+            self.mocks.organization.get_repo.return_value.get_pull = self.mock_get_pull
+
+            self.handler._do_handle(body)
+
+            self.assertEqual("[View issue in JIRA](https://jira.nuxeo.com/browse/NXP-20340)", self.mocks.pr._comment)
