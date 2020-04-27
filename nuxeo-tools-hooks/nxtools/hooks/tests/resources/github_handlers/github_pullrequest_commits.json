@@ -13,7 +13,7 @@
         "email": "slacoin@nuxeo.com",
         "date": "2016-09-01T15:11:49Z"
       },
-      "message": "NXP-20340 fix version parsing in configuration generator",
+      "message": "NXP-20340 fix version parsing in configuration generator (modified for NXBT-3308)",
       "tree": {
         "sha": "eb8a854afac2675dc03d4ac3b3fa703303e87f53",
         "url": "https://api.github.com/repos/nuxeo/nuxeo/git/trees/eb8a854afac2675dc03d4ac3b3fa703303e87f53"

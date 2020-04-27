@@ -26,6 +26,7 @@ from cachecontrol.heuristics import BaseHeuristic
 from email.utils import parsedate, formatdate
 from jira.client import JIRA
 from nxtools import ServiceContainer
+from nxtools.hooks.entities.db_entities import StoredPullRequest
 from nxtools.hooks.services import AbstractService
 
 
@@ -61,9 +62,20 @@ class JiraClient(JIRA):
 class JiraService(AbstractService):
     def __init__(self):
         self.__jira_client = None
+        # NB: the anonymous authentication will depend on any potential introspection from the Jira client logics
+        # (as it can seamlesssly retrieve authentication information from a .netrc file for instance)
+        self.__anonymous_jira_client = None
         if "basic" == self.config("auth_type"):
             self.__jira_client = JiraClient(self.config("url"),
                                             basic_auth=(self.config("basic_username"), self.config("basic_password")))
+            self.__anonymous_jira_client = JiraClient(self.config("url"))
+        elif self.config("url"):
+            self.__jira_client = JiraClient(self.config("url"))
+            self.__anonymous_jira_client = self.__jira_client
+
+    @property
+    def jira_regex(self):
+        return re.compile(self.config("jira_regex", r"\b([A-Z]+-\d+)\b"), re.I)
 
     def get_issue(self, id, fields=None):
         """
@@ -73,8 +85,38 @@ class JiraService(AbstractService):
             return self.__jira_client.issue(id, fields)
         return None
 
+    def get_issue_anonymous(self, id, fields=None):
+        """
+        :rtype: jira.resources.Issue
+        """
+        if self.__anonymous_jira_client is not None:
+            return self.__anonymous_jira_client.issue(id, fields)
+        return None
+
     def get_issue_id_from_branch(self, branch_name):
-        matches = re.compile("[a-z]+-([A-Z]+-[0-9]+)-.*").match(branch_name)
+        matches = self.jira_regex.match(branch_name)
         if matches:
             return matches.group(1)
         return None
+
+    def get_issue_ids_from(self, text):
+        res = []
+        for match in self.jira_regex.finditer(text):
+            ticket = match.group(1).upper()
+            if ticket not in res:
+                res.append(ticket)
+        return res
+
+    def get_issue_ids_from_pullrequest(self, pull_request):
+        keys = []
+        jira_main_key = self.get_issue_id_from_branch(pull_request.branch)
+        if jira_main_key:
+            keys.append(jira_main_key)
+
+        commits = pull_request.gh_object.get_commits()
+        for commit in commits:
+            ckeys = self.get_issue_ids_from(commit.commit.message)
+            for key in ckeys:
+                keys.append(key) if key not in keys else None
+
+        return keys

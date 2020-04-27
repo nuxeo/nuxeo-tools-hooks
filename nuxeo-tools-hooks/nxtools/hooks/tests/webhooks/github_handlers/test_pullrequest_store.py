@@ -20,6 +20,8 @@ Contributors:
 
 from github.PullRequest import PullRequest
 from github.Commit import Commit
+from jira.resources import Issue
+from mock.mock import patch
 from nose.tools import nottest
 from nxtools import services
 from nxtools.hooks.endpoints.webhook.github_handlers.pull_request import GithubStorePullRequestHandler
@@ -105,7 +107,25 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
     def mock_get_pull(self, id):
         return self.mocks.pr
 
+    def mock_get_issue(self, id, fields=None):
+        if id == "NXBT-3308":
+            raw = {
+                'key': 'NXBT-3308',
+                'fields': {
+                    'summary': "test summary for GH comment",
+                }
+            }
+            return Issue(None, None, raw=raw)
+        return None
+
     def test_store_pull_request_trigger_review(self):
+        patchers = [
+            patch("nxtools.hooks.services.jira_service.JiraService.get_issue", self.mock_get_issue),
+            patch("nxtools.hooks.services.jira_service.JiraService.get_issue_anonymous", self.mock_get_issue),
+        ]
+        [patcher.start() for patcher in patchers]
+        [self.addCleanup(patcher.stop) for patcher in patchers]
+
         self.config._config.set("GithubReviewService", "active", "true")
         with GithubHookHandlerTest.payload_file('github_pullrequest_open') as payload, \
             GithubHookHandlerTest.payload_file('github_pullrequest') as prp, \
@@ -117,5 +137,13 @@ class GithubStorePullRequestHandlerTest(GithubHookHandlerTest):
             self.mocks.organization.get_repo.return_value.get_pull = self.mock_get_pull
 
             self.handler._do_handle(body)
+            self.assertEqual("View issues in JIRA:\n" +
+                             "- [NXP-20340](https://jira.nuxeo.com/browse/NXP-20340)\n" +
+                             "- [NXBT-3308](https://jira.nuxeo.com/browse/NXBT-3308)", self.mocks.pr._comment)
 
-            self.assertEqual("[View issue in JIRA](https://jira.nuxeo.com/browse/NXP-20340)", self.mocks.pr._comment)
+            # check verbosity setting
+            self.config._config.set("GithubReviewService", "include_jira_summary", "true")
+            self.handler._do_handle(body)
+            self.assertEqual("View issues in JIRA:\n" +
+                             "- [NXP-20340](https://jira.nuxeo.com/browse/NXP-20340)\n" +
+                             "- [NXBT-3308](https://jira.nuxeo.com/browse/NXBT-3308): test summary for GH comment", self.mocks.pr._comment)
