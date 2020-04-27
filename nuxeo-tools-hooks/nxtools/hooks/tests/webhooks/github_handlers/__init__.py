@@ -38,12 +38,19 @@ class GithubHookHandlerTest(WebHooksTestCase):
 
         def __enter__(self):
             self.payload_file = open('nxtools/hooks/tests/resources/github_handlers/%s.json' % self.filename)
-            self.headers_file = open('nxtools/hooks/tests/resources/github_handlers/%s.headers.json' % self.filename)
-            return self.payload_file.read(), json.load(self.headers_file)
+            self.headers_file = None
+            headers = {}
+            try:
+                self.headers_file = open('nxtools/hooks/tests/resources/github_handlers/%s.headers.json' % self.filename)
+                headers = json.load(self.headers_file)
+            except IOError:
+                pass
+            return self.payload_file.read(), headers
 
         def __exit__(self, exc_type, exc_val, exc_tb):
             self.payload_file.close()
-            self.headers_file.close()
+            if self.headers_file is not None:
+                self.headers_file.close()
 
     def get_json_body_from_payload(self, payload):
         raw_body, headers = payload
