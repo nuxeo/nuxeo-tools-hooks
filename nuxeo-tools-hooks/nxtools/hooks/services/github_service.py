@@ -334,13 +334,26 @@ class GithubReviewService(AbstractService):
         :type pull_request: nxtools.hooks.entities.db_entities.StoredPullRequest
         :rtype: github.IssueComment.IssueComment
         """
+        jira = services.get(JiraService)
+        keys = jira.get_issue_ids_from_pullrequest(pull_request)
 
-        jira_key = services.get(JiraService).get_issue_id_from_branch(pull_request.branch)
         parts = []
-        if jira_key:
-            parts.append("[View issue in JIRA](https://jira.nuxeo.com/browse/%s)" % jira_key)
+        if len(keys) == 1:
+            parts.append("View issue in JIRA: %s" % self._get_issue_comment(keys[0], jira))
+        elif len(keys) > 1:
+            parts.append("View issues in JIRA:")
+            for key in keys:
+                parts.append("- %s" % self._get_issue_comment(key, jira))
         if parts:
             return pull_request.gh_object.create_issue_comment("\n".join(parts))
+
+    def _get_issue_comment(self, key, jira):
+        if self.config('include_jira_summary', False):
+            # don't leak any Jira private info on GitHub
+            issue = jira.get_issue_anonymous(key, 'summary')
+            if issue is not None:
+                return "[%s](https://jira.nuxeo.com/browse/%s): %s" % (key, key, issue.fields.summary)
+        return "[%s](https://jira.nuxeo.com/browse/%s)" % (key, key)
 
     @property
     def activate(self):
