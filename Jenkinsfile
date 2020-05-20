@@ -69,6 +69,13 @@ docker push dockerpriv.nuxeo.com:443/nuxeo/nuxeo-tools-hooks-logstash:${env.BRAN
                 currentBuild.result = "FAILURE"
                 step([$class: 'ClaimPublisher'])
                 throw e
+            } finally {
+                // Update revelant Jira issues only if we are working on the master branch
+                if (env.BRANCH_NAME == 'master') {
+                    step([$class: 'JiraIssueUpdater',
+                        issueSelector: [$class: 'DefaultIssueSelector'],
+                        scm: scm])
+                }
             }
         }
     }
