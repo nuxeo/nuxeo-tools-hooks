@@ -57,6 +57,8 @@ class AbstractGithubHandler(object):
     def get_config(self, key, default=None):
         return services.get(Config).get(self.config_section, key, default)
 
+    def get_config_list(self, key, default=None):
+        return services.get(Config).getlist(self.config_section, key, default)
 
 class AbstractGithubJsonHandler(AbstractGithubHandler):
     __metaclass__ = ABCMeta

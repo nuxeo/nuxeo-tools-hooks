@@ -31,16 +31,16 @@ class JsonFormatter(logmatic.JsonFormatter):
     def config(self, key, default=None):
         return services.get(Config).get(Config.get_section(self), key, default)
 
+    def configlist(self, key, default=None):
+        return services.get(Config).getlist(Config.get_section(self), key, default)
+
     @property
     def entry_type(self):
         return self.config('type', 'nxtools-hooks')
 
     @property
     def entry_tags(self):
-        tags = self.config('tags', [])
-        if tags:
-            tags = re.sub(r"\s+", "", tags, flags=re.UNICODE).split(",")
-        return tags
+        return self.configlist('tags', [])
 
     def __init__(self,
                  fmt="%(asctime) %(name) %(processName) %(filename)  %(funcName) %(levelname) %(lineno) %(module) %(threadName) %(message)",

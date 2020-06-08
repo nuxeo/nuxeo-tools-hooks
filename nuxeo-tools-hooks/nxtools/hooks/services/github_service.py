@@ -261,8 +261,7 @@ class GithubService(AbstractService):
                      organization_name, repository_name, e)
 
     def sync_pull_requests(self):
-        for organization_name in re.sub(r"\s+", "", self.config('sync_pullrequests_organizations', ''),
-                                        flags=re.UNICODE).split(','):
+        for organization_name in self.configlist('sync_pullrequests_organizations', []):
             try:
                 organization = self.get_organization(organization_name)  # type: Organization
                 gevent.joinall([gevent.spawn(
@@ -365,7 +364,4 @@ class GithubReviewService(AbstractService):
 
     @property
     def required_organizations(self):
-        orgas = self.config('required_organizations', [])
-        if orgas:
-            orgas = re.sub(r"\s+", "", orgas, flags=re.UNICODE).split(",")
-        return orgas
+        return self.configlist('required_organizations', [])

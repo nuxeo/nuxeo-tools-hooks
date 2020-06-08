@@ -28,6 +28,8 @@ class AbstractService(object):
     def config(self, key, default=None):
         return services.get(Config).get(Config.get_section(self), key, default)
 
+    def configlist(self, key, default=None):
+        return services.get(Config).getlist(Config.get_section(self), key, default)
 
 class BootableService(object):
     __metaclass__ = ABCMeta
