@@ -361,7 +361,3 @@ class GithubReviewService(AbstractService):
     @property
     def activate(self):
         return self.config('active', False)
-
-    @property
-    def required_organizations(self):
-        return self.configlist('required_organizations', [])
