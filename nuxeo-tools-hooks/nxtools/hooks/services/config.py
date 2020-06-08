@@ -117,4 +117,5 @@ class Config(object):
             config = config.replace('\n', ',')
             config = re.sub(r"\s+", "", config, flags=re.UNICODE).split(",")
             config = filter(None, config)
+            config = filter(lambda x: not x.startswith('#'), config)
         return config
