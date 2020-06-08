@@ -37,7 +37,8 @@ class AbstractGithubHandler(object):
             try:
                 return self._do_handle(payload_body)
             except Exception, e:
-                log.warn('Unhandled exception: %s', e.message, exc_info=1)
+                log.warn('Unhandled exception: %s', e.message, exc_info=True)
+                return 500, "Unhandled exception"
         else:
             return 204, "Disabled"
 
