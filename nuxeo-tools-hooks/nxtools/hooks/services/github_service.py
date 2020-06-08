@@ -1,5 +1,5 @@
 """
-(C) Copyright 2016-2019 Nuxeo SA (http://nuxeo.com/) and contributors.
+(C) Copyright 2016-2020 Nuxeo SA (http://nuxeo.com/) and contributors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ limitations under the License.
 Contributors:
     Pierre-Gildas MILLON <pgmillon@nuxeo.com>
     jcarsique
+    Anahide Tchertchian <at@nuxeo.com>
 """
 
 from httplib import HTTPException
