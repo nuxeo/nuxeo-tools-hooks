@@ -57,11 +57,10 @@ class GithubStorePullRequestHandler(AbstractGithubJsonHandler):
             repository = services.get(GithubService).get_organization(event.organization.login) \
                 .get_repo(event.repository.name)
             stored_pr.gh_object = repository.get_pull(stored_pr.pull_number)
-            last_commit = stored_pr.gh_object.get_commits().reversed[0]  # type: Commit
 
             log.debug('PullRequestEvent action: %s', event.action)
-            log.info('Review asked for %s/%s/pull/%d/commits/%s',
-                     stored_pr.organization, stored_pr.repository, stored_pr.pull_number, last_commit.sha)
+            log.info('Review asked for %s/%s/pull/%d',
+                     stored_pr.organization, stored_pr.repository, stored_pr.pull_number)
 
             if stored_pr.review is None:
                 stored_pr.review = PullRequestReview(pull_request=stored_pr)
