@@ -19,15 +19,19 @@ Contributors:
 
 import re
 import calendar
-from datetime import datetime, timedelta
+import logging
 
 from cachecontrol.adapter import CacheControlAdapter
 from cachecontrol.heuristics import BaseHeuristic
+from datetime import datetime, timedelta
 from email.utils import parsedate, formatdate
 from jira.client import JIRA
+from jira.exceptions import JIRAError
 from nxtools import ServiceContainer
 from nxtools.hooks.entities.db_entities import StoredPullRequest
 from nxtools.hooks.services import AbstractService
+
+log = logging.getLogger(__name__)
 
 
 class OneDayHeuristic(BaseHeuristic):
@@ -82,7 +86,11 @@ class JiraService(AbstractService):
         :rtype: jira.resources.Issue
         """
         if self.__jira_client is not None:
-            return self.__jira_client.issue(id, fields)
+            try:
+                return self.__jira_client.issue(id, fields)
+            except Exception as e:
+                log.debug('get_issue: %s', e)
+                return None
         return None
 
     def get_issue_anonymous(self, id, fields=None):
@@ -90,7 +98,11 @@ class JiraService(AbstractService):
         :rtype: jira.resources.Issue
         """
         if self.__anonymous_jira_client is not None:
-            return self.__anonymous_jira_client.issue(id, fields)
+            try:
+                return self.__anonymous_jira_client.issue(id, fields)
+            except Exception as e:
+                log.debug('get_issue_anonymous: %s', e)
+                return None
         return None
 
     def get_issue_id_from_branch(self, branch_name):
@@ -159,5 +171,6 @@ class JiraService(AbstractService):
                         application=link["application"], relationship=link["relationship"])
                 except Exception as e:
                     # ignore: issue could not exist for instance
+                    log.debug('create_pullrequest_links: %s', e)
                     continue
 
