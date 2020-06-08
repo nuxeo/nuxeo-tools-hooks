@@ -52,10 +52,14 @@ class GithubStorePullRequestHandler(AbstractGithubJsonHandler):
         :return:
         """
         review_service = services.get(GithubReviewService)  # type: GithubReviewService
-        log.debug('Review active: %s, Repository private: %s', review_service.activate, event.repository.private)
-        if review_service.activate and event.repository.private is False:
-            repository = services.get(GithubService).get_organization(event.organization.login) \
-                .get_repo(event.repository.name)
+        activate = review_service.activate
+        orga_name = event.organization.login
+        repo_name = event.repository.name
+        private = event.repository.private
+        log.debug("Review active: %s, Repository organization: '%s', name: '%s', private: %s",
+                  activate, orga_name, repo_name, private)
+        if activate and review_service.handle_repository(orga_name, repo_name, private):
+            repository = services.get(GithubService).get_organization(orga_name).get_repo(repo_name)
             stored_pr.gh_object = repository.get_pull(stored_pr.pull_number)
 
             log.debug('PullRequestEvent action: %s', event.action)
