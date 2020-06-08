@@ -1,0 +1,31 @@
+version: '2'
+
+volumes:
+  data:
+
+services:
+  mongo:
+    image: mongo:latest
+    volumes:
+      - data:/data
+  node:
+    build: .
+    command: sh /opt/docker/node/debug.sh
+
+    volumes:
+      - ./:/opt
+    links:
+      - mongo
+    environment:
+      - PYTHONPATH=/opt/nuxeo-tools-hooks
+      - NXTOOLS_HOOKS_CONF=/opt/conf/nuxeo-tools-hooks.ini
+#      - NXTOOLS_HOOKS_LOGGING_CONFIG_FILE=/opt/conf/log.ini
+#      - NXTOOLS_HOOKS_DATABASE_CONNECTION_URL=mongodb://mongo/nxtools-hooks
+    ports:
+      - 8888:8888
+  proxy:
+    image: nginx:stable
+    links:
+    - node:captainhook-node
+    volumes:
+      - ./docker/nginx-proxy/custom.conf:/etc/nginx/conf.d/10-custom.conf

@@ -1,0 +1,81 @@
+[
+  {
+    "sha": "67bb2b0a5b32463c69b013d6ef0c9eefa08f31ee",
+    "node_id": "MDY6Q29tbWl0Mjk4ODEwMTo2N2JiMmIwYTViMzI0NjNjNjliMDEzZDZlZjBjOWVlZmEwOGYzMWVl",
+    "commit": {
+      "author": {
+        "name": "Stephane Lacoin aka nxmatic",
+        "email": "slacoin@nuxeo.com",
+        "date": "2016-09-01T09:18:19Z"
+      },
+      "committer": {
+        "name": "Stephane Lacoin aka nxmatic",
+        "email": "slacoin@nuxeo.com",
+        "date": "2016-09-01T15:11:49Z"
+      },
+      "message": "NXP-20340 fix version parsing in configuration generator (modified for NXBT-3308)",
+      "tree": {
+        "sha": "eb8a854afac2675dc03d4ac3b3fa703303e87f53",
+        "url": "https://api.github.com/repos/nuxeo/nuxeo/git/trees/eb8a854afac2675dc03d4ac3b3fa703303e87f53"
+      },
+      "url": "https://api.github.com/repos/nuxeo/nuxeo/git/commits/67bb2b0a5b32463c69b013d6ef0c9eefa08f31ee",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/nuxeo/nuxeo/commits/67bb2b0a5b32463c69b013d6ef0c9eefa08f31ee",
+    "html_url": "https://github.com/nuxeo/nuxeo/commit/67bb2b0a5b32463c69b013d6ef0c9eefa08f31ee",
+    "comments_url": "https://api.github.com/repos/nuxeo/nuxeo/commits/67bb2b0a5b32463c69b013d6ef0c9eefa08f31ee/comments",
+    "author": {
+      "login": "nxmatic",
+      "id": 676172,
+      "node_id": "MDQ6VXNlcjY3NjE3Mg==",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/676172?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/nxmatic",
+      "html_url": "https://github.com/nxmatic",
+      "followers_url": "https://api.github.com/users/nxmatic/followers",
+      "following_url": "https://api.github.com/users/nxmatic/following{/other_user}",
+      "gists_url": "https://api.github.com/users/nxmatic/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/nxmatic/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/nxmatic/subscriptions",
+      "organizations_url": "https://api.github.com/users/nxmatic/orgs",
+      "repos_url": "https://api.github.com/users/nxmatic/repos",
+      "events_url": "https://api.github.com/users/nxmatic/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/nxmatic/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "nxmatic",
+      "id": 676172,
+      "node_id": "MDQ6VXNlcjY3NjE3Mg==",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/676172?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/nxmatic",
+      "html_url": "https://github.com/nxmatic",
+      "followers_url": "https://api.github.com/users/nxmatic/followers",
+      "following_url": "https://api.github.com/users/nxmatic/following{/other_user}",
+      "gists_url": "https://api.github.com/users/nxmatic/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/nxmatic/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/nxmatic/subscriptions",
+      "organizations_url": "https://api.github.com/users/nxmatic/orgs",
+      "repos_url": "https://api.github.com/users/nxmatic/repos",
+      "events_url": "https://api.github.com/users/nxmatic/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/nxmatic/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "f2e9d615a003000c709adf2e6712dfcac9a5dc11",
+        "url": "https://api.github.com/repos/nuxeo/nuxeo/commits/f2e9d615a003000c709adf2e6712dfcac9a5dc11",
+        "html_url": "https://github.com/nuxeo/nuxeo/commit/f2e9d615a003000c709adf2e6712dfcac9a5dc11"
+      }
+    ]
+  }
+]
