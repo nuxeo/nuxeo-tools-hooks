@@ -348,7 +348,10 @@ class GithubReviewService(AbstractService):
             for key in keys:
                 parts.append("- %s" % self._get_issue_comment(key, jira))
         if parts:
-            return pull_request.gh_object.create_issue_comment("\n".join(parts))
+            try:
+                return pull_request.gh_object.create_issue_comment("\n".join(parts))
+            except Exception:
+                log.exception('github_notify: Failed to comment PR %s', pull_request.gh_object.html_url)
 
     def _get_issue_comment(self, key, jira):
         if self.config('include_jira_summary', False):
