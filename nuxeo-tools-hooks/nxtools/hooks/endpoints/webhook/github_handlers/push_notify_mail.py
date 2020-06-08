@@ -55,10 +55,8 @@ class GithubPushNotifyMailHandler(AbstractGithubJsonHandler):
 
     @property
     def ignore_checks(self):
-        checks = self.get_config("ignore_checks", [])
-        if checks:
-            checks = re.sub(r"\s+", "", checks, flags=re.UNICODE).split(",")
-        else:
+        checks = self.get_config_list("ignore_checks", [])
+        if not checks:
             return [branch_ignore, suffix_ignore, repository_ignore]
 
         for i, check in enumerate(checks):
@@ -70,38 +68,23 @@ class GithubPushNotifyMailHandler(AbstractGithubJsonHandler):
 
     @property
     def ignored_branches(self):
-        branches = self.get_config("ignored_branches", [])
-        if branches:
-            return re.sub(r"\s+", "", branches, flags=re.UNICODE).split(",")
-        return branches
+        return self.get_config_list("ignored_branches", [])
 
     @property
     def ignore_branch_suffixes(self):
-        suffixes = self.get_config("ignored_branch_suffixes", [])
-        if suffixes:
-            return re.sub(r"\s+", "", suffixes, flags=re.UNICODE).split(",")
-        return suffixes
+        return self.get_config_list("ignored_branch_suffixes", [])
 
     @property
     def ignore_repositories(self):
-        repositories = self.get_config("ignored_repositories", [])
-        if repositories:
-            return re.sub(r"\s+", "", repositories, flags=re.UNICODE).split(",")
-        return repositories
+        return self.get_config_list("ignored_repositories", [])
 
     @property
     def recipients(self):
-        recipients = self.get_config("recipients", "ecm-checkins@lists.nuxeo.com")
-        if recipients:
-            return re.sub(r"\s+", "", recipients, flags=re.UNICODE).split(",")
-        return recipients
+        return self.get_config_list("recipients", "ecm-checkins@lists.nuxeo.com")
 
     @property
     def recipients_priv(self):
-        recipients = self.get_config("recipients_priv", "interne-checkins@lists.nuxeo.com")
-        if recipients:
-            return re.sub(r"\s+", "", recipients, flags=re.UNICODE).split(",")
-        return recipients
+        return self.get_config_list("recipients_priv", "interne-checkins@lists.nuxeo.com")
 
     @property
     def jenkins_name(self):

@@ -26,6 +26,7 @@ from nxtools.hooks import DEFAULTSECT
 from types import ClassType
 
 import os
+import re
 
 log = logging.getLogger(__name__)
 
@@ -109,3 +110,9 @@ class Config(object):
         if config_value.lower() not in self._boolean_states:
             raise ValueError('Not a boolean: %s' % config_value)
         return self._boolean_states[config_value.lower()]
+
+    def getlist(self, section, key, default=None):
+        config = self.get(section, key, default)
+        if config:
+            config = re.sub(r"\s+", "", config, flags=re.UNICODE).split(",")
+        return config

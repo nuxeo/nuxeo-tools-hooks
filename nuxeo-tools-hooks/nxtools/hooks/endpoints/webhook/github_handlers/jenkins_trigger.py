@@ -38,9 +38,7 @@ class GithubJenkinsTriggerHandler(AbstractGithubHandler):
 
     @property
     def jenkins_instances(self):
-        instances = self.get_config('instances', [])
-        if instances:
-            instances = re.sub(r"\s+", "", instances, flags=re.UNICODE).split(",")
+        instances = self.get_config_list('instances', [])
         log.debug('Jenkins instances: %s', instances)
         return instances
 
