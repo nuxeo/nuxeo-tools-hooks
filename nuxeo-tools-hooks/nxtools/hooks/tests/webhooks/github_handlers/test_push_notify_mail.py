@@ -311,23 +311,41 @@ class GithubNotifyMailHandlerTest(GithubHookHandlerTest):
         with GithubHookHandlerTest.payload_file('github_push') as payload:
             body = self.get_json_body_from_payload(payload)
             self.config._config.set(self.handler.config_section, "ignored_repositories",
-                                    "qapriv.nuxeo.org-conf")
-            self.config._config.set(self.handler.config_section, "ignore_checks",
-                                    "nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail."
-                                    "repository_ignore")
-            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler._do_handle(body))
-            self.email_service.sendemail.assert_called_once()
-
-            event = PushEvent(None, None, body, True)
-
-            self.assertTupleEqual((False, False, None), self.handler.check_branch_ignored(event))
-
+                                    "nuxeo/qapriv.nuxeo.org-conf")
             self.assertTrue(body["repository"])
+            self.assertFalse(body["repository"]["private"])
             body["repository"]["name"] = "qapriv.nuxeo.org-conf"
 
             event = PushEvent(None, None, body, True)
-
             self.assertTupleEqual((True, False, None), self.handler.check_branch_ignored(event))
+            self.assertTupleEqual((200, None), self.handler._do_handle(body))
+            self.email_service.sendemail.assert_not_called()
+
+    def test_ignore_private_repository(self):
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
+            body = self.get_json_body_from_payload(payload)
+            self.assertTrue(body["repository"])
+            body["repository"]["name"] = "qapriv.nuxeo.org-conf"
+            body["repository"]["private"] = True
+
+            event = PushEvent(None, None, body, True)
+            self.assertTupleEqual((True, False, None), self.handler.check_branch_ignored(event))
+            self.assertTupleEqual((200, None), self.handler._do_handle(body))
+            self.email_service.sendemail.assert_not_called()
+
+    def test_whitelisted_private_repository(self):
+        with GithubHookHandlerTest.payload_file('github_push') as payload:
+            body = self.get_json_body_from_payload(payload)
+            self.config._config.set(self.handler.config_section, "whitelisted_private_repositories",
+                                    "nuxeo/qapriv.nuxeo.org-conf")
+            self.assertTrue(body["repository"])
+            body["repository"]["name"] = "qapriv.nuxeo.org-conf"
+            body["repository"]["private"] = True
+
+            event = PushEvent(None, None, body, True)
+            self.assertTupleEqual((False, False, None), self.handler.check_branch_ignored(event))
+            self.assertTupleEqual((200, GithubPushNotifyMailHandler.MSG_OK), self.handler._do_handle(body))
+            self.email_service.sendemail.assert_called_once()
 
     def test_standard_payload(self):
         with GithubHookHandlerTest.payload_file('github_push') as payload:
