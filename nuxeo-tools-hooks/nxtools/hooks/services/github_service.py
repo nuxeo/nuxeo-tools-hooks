@@ -361,3 +361,13 @@ class GithubReviewService(AbstractService):
     @property
     def activate(self):
         return self.config('active', False)
+
+    @property
+    def whitelisted_private_repositories(self):
+        return self.configlist('whitelisted_private_repositories', [])
+
+    def handle_repository(self, organization, name, private):
+        if not private:
+            return True
+        key = "%s/%s" % (organization, name)
+        return key in self.whitelisted_private_repositories

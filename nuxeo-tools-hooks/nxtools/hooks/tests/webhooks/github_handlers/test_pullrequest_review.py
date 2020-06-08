@@ -177,10 +177,20 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
             body["repository"]["private"] = True
             pr = self.get_json_body_from_payload(prp)
             commits = self.get_json_body_from_payload(prc)
+            # change commit message to only reference one jira issue
+            commits[0]["commit"]["message"] = "NXP-20340 fix version parsing in configuration generator"
             self.mocks.pr = MockPullRequest(pr, commits)
             self.mocks.organization.get_repo.return_value.get_pull = self.mock_get_pull
             self.mocks.jira_links = []
 
             self.handler._do_handle(body)
+            # check disabled
             self.assertEqual(None, self.mocks.pr._comment)
             self.assertEqual(0, len(self.mocks.jira_links))
+
+            # whitelist the repo
+            self.config._config.set("GithubReviewService", "whitelisted_private_repositories", "nuxeo/nuxeo")
+            self.handler._do_handle(body)
+            # check disabled
+            self.assertEqual("View issue in JIRA: [NXP-20340](https://jira.nuxeo.com/browse/NXP-20340)", self.mocks.pr._comment)
+            self.assertEqual(1, len(self.mocks.jira_links))
