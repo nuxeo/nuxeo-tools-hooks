@@ -109,7 +109,8 @@ class GithubHook(AbstractWebHook):
                     repository_name = json_body['repository']['html_url']
                 log.info('Got a payload %s - %s', repository_name, headers[GithubHook.payloadHeader])
             except ValueError, e:
-                log.warn(e.message)
+                log.warn("Unhandled payload: '%s', error: '%s'", body, e.message, exc_info=True)
+                return 500, "Unhandled payload"
 
             handlers = [handler for handler in self.handlers if handler.can_handle(headers, body)]
 
