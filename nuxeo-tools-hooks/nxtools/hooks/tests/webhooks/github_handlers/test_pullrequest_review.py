@@ -107,7 +107,7 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
     def mock_create_jira_links(self, links):
         self.mocks.jira_links.extend(links)
 
-    def test_store_pull_request_trigger_review(self):
+    def setup_patches(self):
         patchers = [
             patch("nxtools.hooks.services.jira_service.JiraService.get_issue", self.mock_get_issue),
             patch("nxtools.hooks.services.jira_service.JiraService.get_issue_anonymous", self.mock_get_issue),
@@ -116,8 +116,13 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
         [patcher.start() for patcher in patchers]
         [self.addCleanup(patcher.stop) for patcher in patchers]
 
+    def setup_services_config(self):
         self.config._config.set("GithubReviewService", "active", "true")
         self.config._config.set("JiraService", "create_link_to_pullrequest", "true")
+
+    def test_store_pull_request_trigger_review(self):
+        self.setup_patches()
+        self.setup_services_config()
         with GithubHookHandlerTest.payload_file('github_pullrequest_open') as payload, \
             GithubHookHandlerTest.payload_file('github_pullrequest') as prp, \
             GithubHookHandlerTest.payload_file('github_pullrequest_commits') as prc:
@@ -161,3 +166,21 @@ class GithubReviewPullRequestHandlerTest(GithubHookHandlerTest):
             self.assertEqual("View issues in JIRA:\n" +
                              "- [NXP-20340](https://jira.nuxeo.com/browse/NXP-20340)\n" +
                              "- [NXBT-3308](https://jira.nuxeo.com/browse/NXBT-3308): test summary for GH comment", self.mocks.pr._comment)
+
+    def test_store_pull_request_trigger_review_private(self):
+        self.setup_patches()
+        self.setup_services_config()
+        with GithubHookHandlerTest.payload_file('github_pullrequest_open') as payload, \
+            GithubHookHandlerTest.payload_file('github_pullrequest') as prp, \
+            GithubHookHandlerTest.payload_file('github_pullrequest_commits') as prc:
+            body = self.get_json_body_from_payload(payload)
+            body["repository"]["private"] = True
+            pr = self.get_json_body_from_payload(prp)
+            commits = self.get_json_body_from_payload(prc)
+            self.mocks.pr = MockPullRequest(pr, commits)
+            self.mocks.organization.get_repo.return_value.get_pull = self.mock_get_pull
+            self.mocks.jira_links = []
+
+            self.handler._do_handle(body)
+            self.assertEqual(None, self.mocks.pr._comment)
+            self.assertEqual(0, len(self.mocks.jira_links))
