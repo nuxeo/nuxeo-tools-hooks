@@ -79,6 +79,10 @@ class GithubPushNotifyMailHandler(AbstractGithubJsonHandler):
         return self.get_config_list("ignored_repositories", [])
 
     @property
+    def whitelisted_private_repositories(self):
+        return self.get_config_list('whitelisted_private_repositories', [])
+
+    @property
     def recipients(self):
         return self.get_config_list("recipients", "ecm-checkins@lists.nuxeo.com")
 
@@ -271,5 +275,6 @@ def repository_ignore(handler, event):
     :type handler: nxtools.hooks.endpoints.webhook.github_handlers.push_notify_mail.GithubPushNotifyMailHandler
     :type event: nxtools.hooks.entities.github_entities.PushEvent
     """
-    return event.repository.name in handler.ignore_repositories, False, None
+    key = "%s/%s" % (event.organization.login, event.repository.name)
+    return key in handler.ignore_repositories or (event.repository.private and key not in handler.whitelisted_private_repositories), False, None
 
