@@ -114,5 +114,7 @@ class Config(object):
     def getlist(self, section, key, default=None):
         config = self.get(section, key, default)
         if config:
+            config = config.replace('\n', ',')
             config = re.sub(r"\s+", "", config, flags=re.UNICODE).split(",")
+            config = filter(None, config)
         return config
