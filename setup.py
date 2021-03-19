@@ -40,7 +40,7 @@ setup(
         'slackclient==1.0.2',
         'jira==1.0.7',
         'jenkinsapi==0.3.3',
-        'Jinja2==2.10.1',
+        'Jinja2==2.11.3',
         'Unidecode==0.4.19',
         'mongoengine==0.10.6',
         'gevent==1.1.2',
