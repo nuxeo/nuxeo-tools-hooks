@@ -31,7 +31,7 @@ setup(
     package_data={"nxtools.hooks": find_files(["doc/*", "scripts/*", "**/resources/*"])},
     install_requires=[
         'flask>=0.12.3',
-        'Flask-Cors==3.0.2',
+        'Flask-Cors==3.0.9',
         'requests>=2.20.0',
         'requests-oauthlib==0.6.2',
         'PyJWT==1.4.2',
